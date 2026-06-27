@@ -1135,6 +1135,12 @@ def main() -> None:
 
     render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
 
+    # Add expander to view all top 50 covers
+    full_artwork = latest_unique_artwork(filtered_stage, 50)
+    if len(full_artwork) > 6:
+        with st.expander("Expand to view all Top 50 covers"):
+            render_album_rail(full_artwork, title="")
+
     if kpis["validation_failed_days"] or kpis["missing_calendar_dates"]:
         st.markdown(
             f"""
