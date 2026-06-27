@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-DEFAULT_DATA_PATH = Path(r"C:\Users\janaa\Downloads\Atlantic_Spain.csv")
+DEFAULT_DATA_PATH = Path(__file__).resolve().parent.parent / "Atlantic_Spain.csv"
 TOP_N = 50
 
 
