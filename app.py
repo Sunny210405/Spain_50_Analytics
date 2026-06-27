@@ -785,18 +785,16 @@ def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
     import streamlit.components.v1 as _components
 
     def _extract(val: str):
-        """Return (numeric_float, suffix) from a formatted value string like '48.2', '3.5%', '575'."""
         m = _re.match(r"^([\d,]+\.?\d*)(%?)$", val.strip())
         if m:
             return float(m.group(1).replace(",", "")), m.group(2)
         return None, ""
 
-    card_id_base = "kpi"
     cards_html = []
-    js_targets = []
+    js_data = []
 
     for i, (label, value, note) in enumerate(metrics):
-        cid = f"{card_id_base}_{i}"
+        cid = f"kpi_{i}"
         num, suffix = _extract(value)
         if num is not None:
             cards_html.append(
@@ -806,7 +804,7 @@ def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
                 f'<div class="metric-note">{note}</div>'
                 f'</div>'
             )
-            js_targets.append(cid)
+            js_data.append(cid)
         else:
             cards_html.append(
                 f'<div class="metric-card">'
@@ -816,52 +814,96 @@ def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
                 f'</div>'
             )
 
-    # Render cards via markdown (script tags are stripped here, that's fine)
-    st.markdown(
-        f'<div class="metric-grid">{"".join(cards_html)}</div>',
-        unsafe_allow_html=True,
-    )
+    ids_json = "[" + ",".join(f'"{c}"' for c in js_data) + "]"
+    n = len(metrics)
 
-    # Inject animation via iframe component — uses window.parent.document to reach the main DOM
-    ids_json = "[" + ",".join(f'"{c}"' for c in js_targets) + "]"
-    anim_html = f"""
-    <script>
-    (function() {{
+    component_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      html, body {{ background: transparent; height: auto; overflow: hidden; font-family: 'Outfit', sans-serif; }}
+      .metric-grid {{
+        display: grid;
+        grid-template-columns: repeat({n}, minmax(0, 1fr));
+        gap: .9rem;
+        padding: 2px;
+      }}
+      .metric-card {{
+        background: #0d0d0d;
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 8px;
+        padding: .95rem;
+        min-height: 98px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
+        cursor: default;
+      }}
+      .metric-card:hover {{
+        background: #151515;
+        border-color: rgba(29,185,84,0.35);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 30px rgba(29,185,84,0.15);
+      }}
+      .metric-label {{
+        color: #888;
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        white-space: nowrap;
+      }}
+      .metric-value {{
+        color: #f5f5f5;
+        font-size: 1.9rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-top: .55rem;
+      }}
+      .metric-note {{
+        color: #888;
+        font-size: .78rem;
+        margin-top: .35rem;
+      }}
+    </style>
+    </head>
+    <body>
+      <div class="metric-grid">{"".join(cards_html)}</div>
+      <script>
+      (function() {{
         var ids = {ids_json};
         var duration = 1400;
-
         function easeOut(t) {{ return 1 - Math.pow(1 - t, 3); }}
-
         function formatNum(val, isFloat) {{
-            if (isFloat) return val.toFixed(1);
-            return Math.round(val).toLocaleString();
+          if (isFloat) return val.toFixed(1);
+          return Math.round(val).toLocaleString();
         }}
-
-        function runAnimation() {{
-            var startTime = null;
-            function animate(timestamp) {{
-                if (!startTime) startTime = timestamp;
-                var progress = Math.min((timestamp - startTime) / duration, 1);
-                var eased = easeOut(progress);
-                ids.forEach(function(id) {{
-                    var el = window.parent.document.getElementById(id);
-                    if (!el) return;
-                    var target = parseFloat(el.dataset.target);
-                    var suffix = el.dataset.suffix || "";
-                    var isFloat = el.dataset.target.indexOf(".") !== -1;
-                    el.textContent = formatNum(target * eased, isFloat) + suffix;
-                }});
-                if (progress < 1) requestAnimationFrame(animate);
-            }}
-            requestAnimationFrame(animate);
+        var startTime = null;
+        function animate(timestamp) {{
+          if (!startTime) startTime = timestamp;
+          var progress = Math.min((timestamp - startTime) / duration, 1);
+          var eased = easeOut(progress);
+          ids.forEach(function(id) {{
+            var el = document.getElementById(id);
+            if (!el) return;
+            var target = parseFloat(el.dataset.target);
+            var suffix = el.dataset.suffix || "";
+            var isFloat = el.dataset.target.indexOf(".") !== -1;
+            el.textContent = formatNum(target * eased, isFloat) + suffix;
+          }});
+          if (progress < 1) requestAnimationFrame(animate);
         }}
-
-        // Small delay to ensure Streamlit has painted the parent DOM elements
-        setTimeout(runAnimation, 120);
-    }})();
-    </script>
+        requestAnimationFrame(animate);
+      }})();
+      </script>
+    </body>
+    </html>
     """
-    _components.html(anim_html, height=0)
+    _components.html(component_html, height=130, scrolling=False)
+
+
 
 
 
