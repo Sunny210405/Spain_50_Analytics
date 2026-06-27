@@ -781,90 +781,12 @@ def clear_search() -> None:
 
 
 def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
-    import re as _re
-
-    def _extract(val: str):
-        """Return (numeric_float, suffix) from a formatted value string like '48.2', '3.5%', '575'."""
-        m = _re.match(r"^([\d,]+\.?\d*)(%?)$", val.strip())
-        if m:
-            return float(m.group(1).replace(",", "")), m.group(2)
-        return None, ""
-
-    card_id_base = "kpi"
-    cards_html = []
-    js_targets = []
-
-    for i, (label, value, note) in enumerate(metrics):
-        cid = f"{card_id_base}_{i}"
-        num, suffix = _extract(value)
-        if num is not None:
-            cards_html.append(
-                f'<div class="metric-card">'
-                f'<div class="metric-label">{label}</div>'
-                f'<div class="metric-value" id="{cid}" data-target="{num}" data-suffix="{suffix}">0{suffix}</div>'
-                f'<div class="metric-note">{note}</div>'
-                f'</div>'
-            )
-            js_targets.append(cid)
-        else:
-            cards_html.append(
-                f'<div class="metric-card">'
-                f'<div class="metric-label">{label}</div>'
-                f'<div class="metric-value">{value}</div>'
-                f'<div class="metric-note">{note}</div>'
-                f'</div>'
-            )
-
-    ids_json = "[" + ",".join(f'"{c}"' for c in js_targets) + "]"
-
-    anim_js = f"""
-    <script>
-    (function() {{
-        var ids = {ids_json};
-        var duration = 1400;
-        var startTime = null;
-
-        function easeOut(t) {{ return 1 - Math.pow(1 - t, 3); }}
-
-        function formatNum(val, isFloat) {{
-            if (isFloat) return val.toFixed(1);
-            return Math.round(val).toLocaleString();
-        }}
-
-        function animate(timestamp) {{
-            if (!startTime) startTime = timestamp;
-            var progress = Math.min((timestamp - startTime) / duration, 1);
-            var eased = easeOut(progress);
-
-            ids.forEach(function(id) {{
-                var el = document.getElementById(id);
-                if (!el) return;
-                var target = parseFloat(el.dataset.target);
-                var suffix = el.dataset.suffix || "";
-                var isFloat = (el.dataset.target.indexOf(".") !== -1);
-                el.textContent = formatNum(target * eased, isFloat) + suffix;
-            }});
-
-            if (progress < 1) requestAnimationFrame(animate);
-        }}
-
-        // Wait for DOM to be ready then kick off animation
-        function start() {{
-            requestAnimationFrame(animate);
-        }}
-        if (document.readyState === "loading") {{
-            document.addEventListener("DOMContentLoaded", start);
-        }} else {{
-            start();
-        }}
-    }})();
-    </script>
-    """
-
-    st.markdown(
-        f'<div class="metric-grid">{"".join(cards_html)}</div>{anim_js}',
-        unsafe_allow_html=True,
+    cards = "\n".join(
+        f'<div class="metric-card"><div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{value}</div><div class="metric-note">{note}</div></div>'
+        for label, value, note in metrics
     )
+    st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
 
 
 def latest_unique_artwork(rows: pd.DataFrame, limit: int = 6) -> pd.DataFrame:
