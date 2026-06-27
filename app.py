@@ -304,12 +304,19 @@ def inject_global_styles() -> None:
         }
 
         /* Hide Streamlit's auto-injected anchor link icon on headings */
+        a.anchor-link,
+        .anchor-link,
         h1 a, h2 a, h3 a, h4 a,
         .hero-title a,
         [data-testid="stMarkdownContainer"] h1 a,
         [data-testid="stMarkdownContainer"] h2 a,
-        [data-testid="stMarkdownContainer"] h3 a {
+        [data-testid="stMarkdownContainer"] h3 a,
+        [data-testid="stHeadingWithActionElements"] button,
+        [data-testid="stHeadingWithActionElements"] a {
             display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
         }
 
         .hero-copy {
