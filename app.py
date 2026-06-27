@@ -899,9 +899,10 @@ def latest_unique_artwork(rows: pd.DataFrame, limit: int = 6) -> pd.DataFrame:
     return (
         rows[rows["date_dt"].eq(latest_date)]
         .sort_values("position")
-        .drop_duplicates("album_cover_url")
+        .drop_duplicates("song_key")
         .head(limit)
     )
+
 
 
 def render_album_rail(rows: pd.DataFrame, title: str = "Latest playlist covers") -> None:
