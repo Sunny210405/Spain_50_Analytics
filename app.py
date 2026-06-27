@@ -892,16 +892,18 @@ def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
     st.markdown(f'<div class="metric-grid">{cards}</div>', unsafe_allow_html=True)
 
 
-def latest_unique_artwork(rows: pd.DataFrame, limit: int = 6) -> pd.DataFrame:
+def latest_unique_artwork(rows: pd.DataFrame, limit: int = 6, by_cover: bool = False) -> pd.DataFrame:
     if rows.empty:
         return rows
     latest_date = rows["date_dt"].max()
+    dup_col = "album_cover_url" if by_cover else "song_key"
     return (
         rows[rows["date_dt"].eq(latest_date)]
         .sort_values("position")
-        .drop_duplicates("song_key")
+        .drop_duplicates(dup_col)
         .head(limit)
     )
+
 
 
 
@@ -1136,15 +1138,15 @@ def main() -> None:
     if "show_all_covers" not in st.session_state:
         st.session_state["show_all_covers"] = False
 
-    limit_val = 50 if st.session_state["show_all_covers"] else 6
-    latest_artwork = latest_unique_artwork(filtered_stage, limit_val)
+    is_expanded = st.session_state["show_all_covers"]
+    latest_artwork = latest_unique_artwork(filtered_stage, 50 if is_expanded else 6, by_cover=not is_expanded)
     
     render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
 
     # Show dynamic action button below the rail to expand/shrink
-    full_artwork_count = len(latest_unique_artwork(filtered_stage, 50))
+    full_artwork_count = len(latest_unique_artwork(filtered_stage, 50, by_cover=False))
     if full_artwork_count > 6:
-        if st.session_state["show_all_covers"]:
+        if is_expanded:
             if st.button("Show Less ⬆️", key="toggle_covers_btn"):
                 st.session_state["show_all_covers"] = False
                 st.rerun()
@@ -1152,6 +1154,7 @@ def main() -> None:
             if st.button(f"Show All Top {full_artwork_count} ⬇️", key="toggle_covers_btn"):
                 st.session_state["show_all_covers"] = True
                 st.rerun()
+
 
 
     if kpis["validation_failed_days"] or kpis["missing_calendar_dates"]:
