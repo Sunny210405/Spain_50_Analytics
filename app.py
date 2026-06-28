@@ -884,10 +884,6 @@ def clear_search() -> None:
     st.session_state["catalog_search"] = ""
 
 
-def toggle_covers(show: bool) -> None:
-    st.session_state["show_all_covers"] = show
-
-
 def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
     cards = "\n".join(
         f'<div class="metric-card"><div class="metric-label">{label}</div>'
@@ -919,8 +915,6 @@ def render_album_rail(rows: pd.DataFrame, title: str = "Latest playlist covers")
     is_expanded = len(rows) > 6
     for idx, (_, row) in enumerate(rows.iterrows()):
         cover_url = str(row["album_cover_url"])
-        # Optimize Spotify image URLs: replace 640x640 (b273) with 300x300 (1e02) size (loads 4x faster)
-        cover_url = cover_url.replace("ab67616d0000b273", "ab67616d00001e02")
         
         # Staggered animation delay for a premium cascading effect (cap delay to prevent long trails)
         delay_ms = min(idx * 20, 600) if is_expanded else idx * 30
@@ -1161,9 +1155,13 @@ def main() -> None:
         _, btn_col, _ = st.columns([1.5, 1, 1.5])
         with btn_col:
             if is_expanded:
-                st.button("Show Less ↑", key="show_less_covers_btn", on_click=toggle_covers, args=(False,), use_container_width=True)
+                if st.button("Show Less ↑", key="toggle_covers_btn", use_container_width=True):
+                    st.session_state["show_all_covers"] = False
+                    st.rerun()
             else:
-                st.button(f"Show All Top {full_artwork_count} ↓", key="show_more_covers_btn", on_click=toggle_covers, args=(True,), use_container_width=True)
+                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", use_container_width=True):
+                    st.session_state["show_all_covers"] = True
+                    st.rerun()
 
 
 
