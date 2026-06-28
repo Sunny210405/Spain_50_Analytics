@@ -581,6 +581,7 @@ def inject_global_styles() -> None:
             border-radius: 6px;
             display: block;
             box-shadow: 0 12px 28px rgba(0,0,0,.38);
+            background: #181818;
         }
 
         .album-rank {
@@ -911,12 +912,19 @@ def render_album_rail(rows: pd.DataFrame, title: str = "Latest playlist covers")
     if rows.empty:
         return
     cards = []
-    for _, row in rows.iterrows():
+    is_expanded = len(rows) > 6
+    for idx, (_, row) in enumerate(rows.iterrows()):
+        cover_url = str(row["album_cover_url"])
+        # Optimize Spotify image URLs: replace 640x640 (b273) with 300x300 (1e02) size (loads 4x faster)
+        cover_url = cover_url.replace("ab67616d0000b273", "ab67616d00001e02")
+        
+        # Staggered animation delay for a premium cascading effect (cap delay to prevent long trails)
+        delay_ms = min(idx * 20, 600) if is_expanded else idx * 30
         cards.append(
             "".join(
                 [
-                    '<div class="album-card">',
-                    f'<img src="{escape(str(row["album_cover_url"]))}" alt="{escape(str(row["song"]))} album cover">',
+                    f'<div class="album-card" style="animation-delay: {delay_ms}ms;">',
+                    f'<img src="{escape(cover_url)}" alt="{escape(str(row["song"]))} album cover">',
                     f'<div class="album-rank">#{int(row["position"])}</div>',
                     f'<div class="album-title">{escape(str(row["song"]))}</div>',
                     f'<div class="album-artist">{escape(str(row["artist"]))}</div>',
@@ -925,7 +933,7 @@ def render_album_rail(rows: pd.DataFrame, title: str = "Latest playlist covers")
             )
         )
     st.markdown(f'<div class="section-title">{escape(title)}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="album-rail">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="album-rail {"expanded" if is_expanded else "collapsed"}">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
 def render_track_focus(row: pd.Series) -> None:
