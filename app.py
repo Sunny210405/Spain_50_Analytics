@@ -884,6 +884,10 @@ def clear_search() -> None:
     st.session_state["catalog_search"] = ""
 
 
+def toggle_covers(show: bool) -> None:
+    st.session_state["show_all_covers"] = show
+
+
 def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
     cards = "\n".join(
         f'<div class="metric-card"><div class="metric-label">{label}</div>'
@@ -1157,13 +1161,9 @@ def main() -> None:
         _, btn_col, _ = st.columns([1.5, 1, 1.5])
         with btn_col:
             if is_expanded:
-                if st.button("Show Less ↑", key="toggle_covers_btn", use_container_width=True):
-                    st.session_state["show_all_covers"] = False
-                    st.rerun()
+                st.button("Show Less ↑", key="show_less_covers_btn", on_click=toggle_covers, args=(False,), use_container_width=True)
             else:
-                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", use_container_width=True):
-                    st.session_state["show_all_covers"] = True
-                    st.rerun()
+                st.button(f"Show All Top {full_artwork_count} ↓", key="show_more_covers_btn", on_click=toggle_covers, args=(True,), use_container_width=True)
 
 
 
