@@ -679,16 +679,15 @@ def inject_global_styles() -> None:
         }
 
         /* ── Chart panel (glass tab) ──
-           Matches the "Explicit Content Lifecycle Score" card:
-           dark solid background, subtle border, soft glow shadow. */
+           Uses #1e1e1e base so it's visibly distinct from the #050505 page bg. */
         [data-testid="stVerticalBlockBorderWrapper"] {
-            background: rgba(18, 18, 18, 0.82) !important;
-            backdrop-filter: blur(14px) saturate(1.4) !important;
-            -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
+            background: #1e1e1e !important;
+            backdrop-filter: blur(14px) saturate(1.3) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
+            border: 1px solid rgba(255,255,255,0.12) !important;
             border-radius: 12px !important;
             overflow: hidden !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06) !important;
             animation: fadeUp .5s ease both;
             transition: box-shadow 0.3s cubic-bezier(0.25,0.8,0.25,1),
                         border-color 0.3s ease !important;
@@ -696,12 +695,9 @@ def inject_global_styles() -> None:
         }
 
         [data-testid="stVerticalBlockBorderWrapper"]:hover {
-            background: rgba(24, 24, 24, 0.88) !important;
             border-color: rgba(29,185,84,0.35) !important;
-            box-shadow: 0 12px 40px rgba(29,185,84,0.15),
-                        0 0 0 1px rgba(29,185,84,0.08),
-                        inset 0 1px 0 rgba(255,255,255,0.10) !important;
-            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(29,185,84,0.12),
+                        inset 0 1px 0 rgba(255,255,255,0.08) !important;
         }
 
         /* Remove extra padding Streamlit adds inside the border wrapper */
@@ -710,65 +706,34 @@ def inject_global_styles() -> None:
             gap: 0 !important;
         }
 
-        /* Panel header strip (.cp-header injected as first child) */
+        /* Panel title — plain label, no dot, no coloured background */
         .cp-header {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            padding: 0.62rem 1rem 0.65rem;
+            padding: 0.65rem 1rem 0.6rem;
             border-bottom: 1px solid rgba(255,255,255,0.07);
-            background: rgba(29,185,84,0.07);
             margin: 0 0 0.5rem;
-        }
-
-        .cp-header::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-            flex-shrink: 0;
-            box-shadow: 0 0 7px rgba(29,185,84,0.75);
         }
 
         .cp-header-title {
-            color: var(--text);
-            font-size: 0.88rem;
-            font-weight: 800;
-            letter-spacing: 0.01em;
+            color: var(--muted);
+            font-size: 0.80rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
         }
 
-        /* Validation tab: red-tinted panel */
+        /* Validation tab header */
         .cp-header-red {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            padding: 0.62rem 1rem 0.65rem;
-            border-bottom: 1px solid rgba(235,87,87,0.22);
-            background: rgba(235,87,87,0.11);
+            padding: 0.65rem 1rem 0.6rem;
+            border-bottom: 1px solid rgba(235,87,87,0.18);
             margin: 0 0 0.5rem;
-        }
-
-        .cp-header-red::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #EB5757;
-            flex-shrink: 0;
-            box-shadow: 0 0 7px rgba(235,87,87,0.75);
         }
 
         .cp-header-red-title {
             color: #ff6b6b;
-            font-size: 0.88rem;
-            font-weight: 800;
-        }
-
-        /* Validation bordered container gets red tint */
-        .cp-red-panel [data-testid="stVerticalBlockBorderWrapper"] {
-            border-color: rgba(235,87,87,0.25) !important;
-            background: rgba(235,87,87,0.07) !important;
+            font-size: 0.80rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
         }
 
         div[data-testid="stTextInput"] input {
