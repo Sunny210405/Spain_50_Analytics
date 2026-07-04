@@ -678,27 +678,30 @@ def inject_global_styles() -> None:
             box-shadow: none;
         }
 
-        /* ── Semi-transparent chart panel (glass tab) ──
-           st.container(border=True) creates stVerticalBlockBorderWrapper.
-           We override its default styles to get the frosted-glass look. */
+        /* ── Chart panel (glass tab) ──
+           Matches the "Explicit Content Lifecycle Score" card:
+           dark solid background, subtle border, soft glow shadow. */
         [data-testid="stVerticalBlockBorderWrapper"] {
-            background: rgba(18, 18, 18, 0.58) !important;
-            backdrop-filter: blur(20px) saturate(1.6) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
-            border: 1px solid rgba(255,255,255,0.09) !important;
+            background: rgba(18, 18, 18, 0.82) !important;
+            backdrop-filter: blur(14px) saturate(1.4) !important;
+            -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
             border-radius: 12px !important;
             overflow: hidden !important;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07) !important;
             animation: fadeUp .5s ease both;
-            transition: box-shadow 0.3s ease, border-color 0.3s ease !important;
+            transition: box-shadow 0.3s cubic-bezier(0.25,0.8,0.25,1),
+                        border-color 0.3s ease !important;
             padding: 0 !important;
         }
 
         [data-testid="stVerticalBlockBorderWrapper"]:hover {
-            border-color: rgba(29,185,84,0.30) !important;
-            box-shadow: 0 14px 54px rgba(0,0,0,0.48),
-                        0 0 0 1px rgba(29,185,84,0.10),
-                        inset 0 1px 0 rgba(255,255,255,0.09) !important;
+            background: rgba(24, 24, 24, 0.88) !important;
+            border-color: rgba(29,185,84,0.35) !important;
+            box-shadow: 0 12px 40px rgba(29,185,84,0.15),
+                        0 0 0 1px rgba(29,185,84,0.08),
+                        inset 0 1px 0 rgba(255,255,255,0.10) !important;
+            transform: translateY(-2px);
         }
 
         /* Remove extra padding Streamlit adds inside the border wrapper */
