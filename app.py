@@ -685,12 +685,14 @@ def inject_global_styles() -> None:
         html body [data-testid="stVerticalBlockBorderWrapper"],
         html body section [data-testid="stVerticalBlockBorderWrapper"],
         html body div[data-testid="stVerticalBlockBorderWrapper"] {
-            background: #272727 !important;
-            background-color: #272727 !important;
-            border: 1px solid rgba(255,255,255,0.14) !important;
+            background: rgba(18, 18, 18, 0.6) !important;
+            background-color: rgba(18, 18, 18, 0.6) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
             border-radius: 12px !important;
             overflow: hidden !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
             animation: fadeUp .5s ease both;
             transition: box-shadow 0.3s cubic-bezier(0.25,0.8,0.25,1),
                         border-color 0.3s ease !important;
@@ -699,9 +701,11 @@ def inject_global_styles() -> None:
 
         html body [data-testid="stVerticalBlockBorderWrapper"]:hover,
         html body div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-            border-color: rgba(29,185,84,0.38) !important;
-            box-shadow: 0 12px 42px rgba(29,185,84,0.13),
-                        inset 0 1px 0 rgba(255,255,255,0.09) !important;
+            background: rgba(24, 24, 24, 0.75) !important;
+            background-color: rgba(24, 24, 24, 0.75) !important;
+            border-color: rgba(29,185,84,0.3) !important;
+            box-shadow: 0 12px 42px rgba(29,185,84,0.1),
+                        inset 0 1px 0 rgba(255,255,255,0.06) !important;
         }
 
         /* Inner stVerticalBlock must be transparent so outer wrapper's
