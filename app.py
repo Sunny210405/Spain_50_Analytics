@@ -1102,6 +1102,34 @@ def bar_chart(df: pd.DataFrame, x: str, y: str, color: str | None = None, title:
     return chart_style(chart)
 
 
+def donut_chart(df: pd.DataFrame, category: str, value: str, color_key: str | None = None, title: str | None = None):
+    chart_df = df.copy()
+    scale = None
+    if color_key == "explicit_label":
+        scale = color_scale(EXPLICIT_COLORS)
+    elif color_key == "release_form":
+        scale = color_scale(RELEASE_COLORS)
+
+    if color_key and scale:
+        color_encoding = alt.Color(f"{category}:N", scale=scale, title=category.replace("_", " ").title())
+    else:
+        color_encoding = alt.Color(f"{category}:N", title=category.replace("_", " ").title())
+
+    chart = (
+        alt.Chart(chart_df)
+        .mark_arc(innerRadius=50, outerRadius=90, stroke="#181818", strokeWidth=2)
+        .encode(
+            theta=alt.Theta(f"{value}:Q", stack=True),
+            color=color_encoding,
+            tooltip=[category, alt.Tooltip(f"{value}:Q", format=".1f")],
+        )
+        .properties(height=260)
+    )
+    if title:
+        chart = chart.properties(title=title)
+    return chart_style(chart)
+
+
 def main() -> None:
     inject_global_styles()
 
@@ -1422,13 +1450,13 @@ def main() -> None:
                 explicit_summary = attribute_summary(filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(explicit_summary, use_container_width=True, hide_index=True)
                 if len(explicit_summary):
-                    st.altair_chart(bar_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), use_container_width=True)
+                    st.altair_chart(donut_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), use_container_width=True)
         with col_b:
             with chart_panel("Single vs Album — Avg Longevity"):
                 release_summary = attribute_summary(filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(release_summary, use_container_width=True, hide_index=True)
                 if len(release_summary):
-                    st.altair_chart(bar_chart(release_summary, "release_form", "avg_days", "release_form"), use_container_width=True)
+                    st.altair_chart(donut_chart(release_summary, "release_form", "avg_days", "release_form"), use_container_width=True)
 
         with chart_panel("Duration vs Retention Scatter"):
             duration_chart = (
