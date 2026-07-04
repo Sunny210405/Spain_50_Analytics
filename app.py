@@ -670,13 +670,60 @@ def inject_global_styles() -> None:
         }
 
         div[data-testid="stAltairChart"] {
-            background: var(--panel);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: .75rem;
+            background: transparent;
+            border: none;
+            padding: 0;
+            animation: none;
+            box-shadow: none;
+        }
+
+        /* Semi-transparent chart panel / tab */
+        .chart-panel {
+            background: rgba(18, 18, 18, 0.55);
+            backdrop-filter: blur(18px) saturate(1.5);
+            -webkit-backdrop-filter: blur(18px) saturate(1.5);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
             animation: fadeUp .5s ease both;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .chart-panel:hover {
+            border-color: rgba(29,185,84,0.22);
+            box-shadow: 0 12px 50px rgba(0,0,0,0.42), 0 0 0 1px rgba(29,185,84,0.08), inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .chart-panel-header {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .7rem 1rem .65rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            background: rgba(29,185,84,0.06);
+        }
+
+        .chart-panel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+            box-shadow: 0 0 6px rgba(29,185,84,0.6);
+        }
+
+        .chart-panel-title {
+            color: var(--text);
+            font-size: .88rem;
+            font-weight: 800;
+            letter-spacing: .01em;
+            text-transform: none;
+        }
+
+        .chart-panel-body {
+            padding: .9rem .85rem .75rem;
         }
 
         div[data-testid="stTextInput"] input {
@@ -882,6 +929,24 @@ def clear_search() -> None:
     """Clear both the input widget and the persisted search state."""
     st.session_state["catalog_search_input"] = ""
     st.session_state["catalog_search"] = ""
+
+
+def open_chart_panel(title: str) -> None:
+    """Inject the opening HTML for a semi-transparent chart panel tab."""
+    st.markdown(
+        f'<div class="chart-panel">'
+        f'<div class="chart-panel-header">'
+        f'<span class="chart-panel-dot"></span>'
+        f'<span class="chart-panel-title">{escape(title)}</span>'
+        f'</div>'
+        f'<div class="chart-panel-body">',
+        unsafe_allow_html=True,
+    )
+
+
+def close_chart_panel() -> None:
+    """Inject the closing HTML for a chart panel tab."""
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 
 def render_metric_grid(metrics: list[tuple[str, str, str]]) -> None:
@@ -1192,14 +1257,15 @@ def main() -> None:
     with tabs[0]:
         left, right = st.columns([1, 1])
         with left:
-            st.markdown('<div class="section-title">Lifecycle stage distribution</div>', unsafe_allow_html=True)
+            open_chart_panel("Lifecycle Stage Distribution")
             dist = stage_distribution(filtered_stage) if len(filtered_stage) else pd.DataFrame()
             if len(dist):
                 st.altair_chart(bar_chart(dist, "stage", "observations", "stage"), use_container_width=True)
             else:
                 st.info("No rows match the selected filters.")
+            close_chart_panel()
         with right:
-            st.markdown('<div class="section-title">Top lifecycle performers</div>', unsafe_allow_html=True)
+            open_chart_panel("Top Lifecycle Performers")
             table = filtered_lifecycle[
                 [
                     "album_cover_url",
@@ -1227,6 +1293,7 @@ def main() -> None:
                         "avg_popularity": st.column_config.NumberColumn("Avg popularity", format="%.1f"),
                     },
                 )
+            close_chart_panel()
 
     with tabs[1]:
         if filtered_lifecycle.empty:
@@ -1242,7 +1309,10 @@ def main() -> None:
             selected_meta = lifecycle[lifecycle["song_key"].eq(selected_key)].iloc[0]
             render_track_focus(selected_meta)
             song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
+            open_chart_panel("Playlist Position Over Time")
             st.altair_chart(line_rank_chart(song_rows), use_container_width=True)
+            close_chart_panel()
+            open_chart_panel("Daily Stage Breakdown")
             st.dataframe(
                 song_rows[
                     [
@@ -1259,9 +1329,9 @@ def main() -> None:
                 use_container_width=True,
                 hide_index=True,
             )
+            close_chart_panel()
 
     with tabs[2]:
-        st.markdown('<div class="section-title">Daily entry and exit flow</div>', unsafe_allow_html=True)
         flow = filtered_churn.copy()
         flow_long = flow.melt(
             id_vars=["date_dt"],
@@ -1295,7 +1365,9 @@ def main() -> None:
                 tooltip=["date_dt:T", "flow:N", "songs:Q"],
             )
         )
+        open_chart_panel("Daily Entry & Exit Flow")
         st.altair_chart(chart_style(flow_chart.properties(height=360)), use_container_width=True)
+        close_chart_panel()
 
     with tabs[3]:
         # Dynamic explicit lifecycle score and release form longevity ratio calculations
@@ -1335,18 +1407,20 @@ def main() -> None:
         col_a, col_b = st.columns(2)
         with col_a:
             explicit_summary = attribute_summary(filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
-            st.markdown('<div class="section-title">Explicit vs clean</div>', unsafe_allow_html=True)
+            open_chart_panel("Explicit vs Clean — Avg Longevity")
             st.dataframe(explicit_summary, use_container_width=True, hide_index=True)
             if len(explicit_summary):
                 st.altair_chart(bar_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), use_container_width=True)
+            close_chart_panel()
         with col_b:
             release_summary = attribute_summary(filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
-            st.markdown('<div class="section-title">Single vs album</div>', unsafe_allow_html=True)
+            open_chart_panel("Single vs Album — Avg Longevity")
             st.dataframe(release_summary, use_container_width=True, hide_index=True)
             if len(release_summary):
                 st.altair_chart(bar_chart(release_summary, "release_form", "avg_days", "release_form"), use_container_width=True)
+            close_chart_panel()
 
-        st.markdown('<div class="section-title">Duration vs retention</div>', unsafe_allow_html=True)
+        open_chart_panel("Duration vs Retention Scatter")
         duration_chart = (
             alt.Chart(filtered_lifecycle)
             .mark_circle(opacity=0.78, stroke="#050505", strokeWidth=1.4)
@@ -1360,9 +1434,9 @@ def main() -> None:
             .properties(height=340)
         )
         st.altair_chart(chart_style(duration_chart), use_container_width=True)
+        close_chart_panel()
 
     with tabs[4]:
-        st.markdown('<div class="section-title">Monthly rotation profile</div>', unsafe_allow_html=True)
         monthly = monthly_rotation(filtered_churn)
         if len(monthly):
             monthly_long = monthly.melt(
@@ -1398,11 +1472,15 @@ def main() -> None:
                 )
             )
             monthly_chart = monthly_chart.properties(height=360)
+            open_chart_panel("Monthly Rotation Profile")
             st.altair_chart(chart_style(monthly_chart), use_container_width=True)
+            close_chart_panel()
+            open_chart_panel("Monthly Rotation Data")
             st.dataframe(monthly, use_container_width=True, hide_index=True)
+            close_chart_panel()
 
     with tabs[5]:
-        st.markdown('<div class="section-title">Song lifecycle explorer</div>', unsafe_allow_html=True)
+        open_chart_panel("Song Lifecycle Explorer")
         display = filtered_lifecycle[
             [
                 "album_cover_url",
@@ -1435,11 +1513,18 @@ def main() -> None:
                 "duration_min": st.column_config.NumberColumn("Duration min", format="%.2f"),
             },
         )
+        close_chart_panel()
 
     with tabs[6]:
         st.markdown(
-            '<div style="font-size:1.1rem;font-weight:800;color:#ff6b6b;margin:.35rem 0 .65rem;letter-spacing:0;">'
-            '⚠️ Raw Data Validation</div>',
+            '<div style="background:rgba(235,87,87,0.08);border:1px solid rgba(235,87,87,0.25);'
+            'border-radius:12px;overflow:hidden;margin-bottom:1rem;box-shadow:0 8px 40px rgba(0,0,0,0.35);">'
+            '<div style="display:flex;align-items:center;gap:.65rem;padding:.7rem 1rem .65rem;'
+            'border-bottom:1px solid rgba(235,87,87,0.18);background:rgba(235,87,87,0.10);">'
+            '<span style="width:8px;height:8px;border-radius:50%;background:#EB5757;flex-shrink:0;'
+            'box-shadow:0 0 6px rgba(235,87,87,0.7);display:inline-block;"></span>'
+            '<span style="color:#ff6b6b;font-size:.88rem;font-weight:800;">⚠️ Raw Data Validation</span>'
+            '</div><div style="padding:.9rem .85rem .75rem;">',
             unsafe_allow_html=True,
         )
         st.dataframe(validation, use_container_width=True, hide_index=True)
@@ -1452,6 +1537,7 @@ def main() -> None:
                 unsafe_allow_html=True,
             )
             st.dataframe(failed, use_container_width=True, hide_index=True)
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
 
     st.markdown(
