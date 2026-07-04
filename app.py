@@ -679,29 +679,37 @@ def inject_global_styles() -> None:
         }
 
         /* ── Chart panel (glass tab) ──
-           Uses #1e1e1e base so it's visibly distinct from the #050505 page bg. */
-        [data-testid="stVerticalBlockBorderWrapper"] {
-            background: #1e1e1e !important;
-            backdrop-filter: blur(14px) saturate(1.3) !important;
-            -webkit-backdrop-filter: blur(14px) saturate(1.3) !important;
-            border: 1px solid rgba(255,255,255,0.12) !important;
+           Streamlit's emotion CSS applies secondaryBackgroundColor (#121212) to
+           stVerticalBlockBorderWrapper. To beat it, we need higher specificity
+           (compound selectors with type + attribute) AND explicit background-color. */
+        html body [data-testid="stVerticalBlockBorderWrapper"],
+        html body section [data-testid="stVerticalBlockBorderWrapper"],
+        html body div[data-testid="stVerticalBlockBorderWrapper"] {
+            background: #272727 !important;
+            background-color: #272727 !important;
+            border: 1px solid rgba(255,255,255,0.14) !important;
             border-radius: 12px !important;
             overflow: hidden !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07) !important;
             animation: fadeUp .5s ease both;
             transition: box-shadow 0.3s cubic-bezier(0.25,0.8,0.25,1),
                         border-color 0.3s ease !important;
             padding: 0 !important;
         }
 
-        [data-testid="stVerticalBlockBorderWrapper"]:hover {
-            border-color: rgba(29,185,84,0.35) !important;
-            box-shadow: 0 12px 40px rgba(29,185,84,0.12),
-                        inset 0 1px 0 rgba(255,255,255,0.08) !important;
+        html body [data-testid="stVerticalBlockBorderWrapper"]:hover,
+        html body div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+            border-color: rgba(29,185,84,0.38) !important;
+            box-shadow: 0 12px 42px rgba(29,185,84,0.13),
+                        inset 0 1px 0 rgba(255,255,255,0.09) !important;
         }
 
-        /* Remove extra padding Streamlit adds inside the border wrapper */
-        [data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+        /* Inner stVerticalBlock must be transparent so outer wrapper's
+           background colour is visible (Streamlit may set its own bg on it) */
+        html body [data-testid="stVerticalBlockBorderWrapper"] > [data-testid="stVerticalBlock"],
+        html body div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+            background: transparent !important;
+            background-color: transparent !important;
             padding: 0 !important;
             gap: 0 !important;
         }
