@@ -663,6 +663,20 @@ def inject_global_styles() -> None:
             background-color: var(--accent);
         }
 
+        /* Tab Content Panel Background */
+        div[data-baseweb="tab-panel"],
+        div[data-testid="stTabContent"],
+        div.e1f086ag3,
+        div.e1f086ag4 {
+            background: #181818 !important;
+            background-color: #181818 !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 12px !important;
+            padding: 1.25rem !important;
+            margin-top: 0.5rem !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45) !important;
+        }
+
         [data-testid="stDataFrame"],
         [data-testid="stTable"] {
             border: 1px solid var(--border);
