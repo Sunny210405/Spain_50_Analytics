@@ -679,107 +679,93 @@ def inject_global_styles() -> None:
         }
 
         /* ── Semi-transparent chart panel (glass tab) ──
-           Uses CSS :has() to target the stVerticalBlock that st.container()
-           creates, keyed on the .cp-marker sentinel inside it.
-           The > chain prevents matching ancestor blocks. */
-        [data-testid="stVerticalBlock"]:has(
-            > div[data-testid="element-container"]
-            > div[data-testid="stMarkdownContainer"]
-            .cp-marker
-        ) {
-            background: rgba(18, 18, 18, 0.55);
-            backdrop-filter: blur(18px) saturate(1.5);
-            -webkit-backdrop-filter: blur(18px) saturate(1.5);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+           st.container(border=True) creates stVerticalBlockBorderWrapper.
+           We override its default styles to get the frosted-glass look. */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            background: rgba(18, 18, 18, 0.58) !important;
+            backdrop-filter: blur(20px) saturate(1.6) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(1.6) !important;
+            border: 1px solid rgba(255,255,255,0.09) !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06) !important;
             animation: fadeUp .5s ease both;
-            transition: box-shadow 0.3s ease, border-color 0.3s ease;
-            padding: 0 0.5rem 0.5rem !important;
+            transition: box-shadow 0.3s ease, border-color 0.3s ease !important;
+            padding: 0 !important;
         }
 
-        [data-testid="stVerticalBlock"]:has(
-            > div[data-testid="element-container"]
-            > div[data-testid="stMarkdownContainer"]
-            .cp-marker
-        ):hover {
-            border-color: rgba(29,185,84,0.28);
-            box-shadow: 0 14px 54px rgba(0,0,0,0.45),
+        [data-testid="stVerticalBlockBorderWrapper"]:hover {
+            border-color: rgba(29,185,84,0.30) !important;
+            box-shadow: 0 14px 54px rgba(0,0,0,0.48),
                         0 0 0 1px rgba(29,185,84,0.10),
-                        inset 0 1px 0 rgba(255,255,255,0.08);
+                        inset 0 1px 0 rgba(255,255,255,0.09) !important;
         }
 
-        /* Panel header strip rendered by the .cp-marker div itself */
-        .cp-marker {
+        /* Remove extra padding Streamlit adds inside the border wrapper */
+        [data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] {
+            padding: 0 !important;
+            gap: 0 !important;
+        }
+
+        /* Panel header strip (.cp-header injected as first child) */
+        .cp-header {
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            padding: 0.55rem 0.45rem 0.6rem;
+            padding: 0.62rem 1rem 0.65rem;
             border-bottom: 1px solid rgba(255,255,255,0.07);
-            background: rgba(29,185,84,0.06);
-            margin: -1px -0.5rem 0.6rem;
+            background: rgba(29,185,84,0.07);
+            margin: 0 0 0.5rem;
         }
 
-        .cp-marker::before {
+        .cp-header::before {
             content: '';
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: var(--accent);
             flex-shrink: 0;
-            box-shadow: 0 0 7px rgba(29,185,84,0.7);
+            box-shadow: 0 0 7px rgba(29,185,84,0.75);
         }
 
-        .cp-marker-title {
+        .cp-header-title {
             color: var(--text);
             font-size: 0.88rem;
             font-weight: 800;
             letter-spacing: 0.01em;
         }
 
-        /* Validation tab uses a red-tinted variant */
-        [data-testid="stVerticalBlock"]:has(
-            > div[data-testid="element-container"]
-            > div[data-testid="stMarkdownContainer"]
-            .cp-marker-red
-        ) {
-            background: rgba(235,87,87,0.07);
-            backdrop-filter: blur(18px) saturate(1.5);
-            -webkit-backdrop-filter: blur(18px) saturate(1.5);
-            border: 1px solid rgba(235,87,87,0.22);
-            border-radius: 12px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.35);
-            padding: 0 0.5rem 0.5rem !important;
-        }
-
-        .cp-marker-red {
+        /* Validation tab: red-tinted panel */
+        .cp-header-red {
             display: flex;
             align-items: center;
             gap: 0.6rem;
-            padding: 0.55rem 0.45rem 0.6rem;
-            border-bottom: 1px solid rgba(235,87,87,0.18);
-            background: rgba(235,87,87,0.10);
-            margin: -1px -0.5rem 0.6rem;
+            padding: 0.62rem 1rem 0.65rem;
+            border-bottom: 1px solid rgba(235,87,87,0.22);
+            background: rgba(235,87,87,0.11);
+            margin: 0 0 0.5rem;
         }
 
-        .cp-marker-red::before {
+        .cp-header-red::before {
             content: '';
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #EB5757;
             flex-shrink: 0;
-            box-shadow: 0 0 7px rgba(235,87,87,0.7);
+            box-shadow: 0 0 7px rgba(235,87,87,0.75);
         }
 
-        .cp-marker-red-title {
+        .cp-header-red-title {
             color: #ff6b6b;
             font-size: 0.88rem;
             font-weight: 800;
+        }
+
+        /* Validation bordered container gets red tint */
+        .cp-red-panel [data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: rgba(235,87,87,0.25) !important;
+            background: rgba(235,87,87,0.07) !important;
         }
 
         div[data-testid="stTextInput"] input {
@@ -990,16 +976,15 @@ def clear_search() -> None:
 
 @contextmanager
 def chart_panel(title: str, red: bool = False):
-    """Context manager that wraps its content in a semi-transparent glass panel.
-
-    Uses st.container() so Streamlit widgets rendered inside are truly grouped
-    in one DOM block, then CSS :has(.cp-marker) styles that block as a panel.
+    """Context manager: renders children inside a native Streamlit bordered
+    container (st.container(border=True)), which creates a real DOM wrapper
+    (stVerticalBlockBorderWrapper) that our CSS can reliably style.
     """
-    marker_cls = "cp-marker-red" if red else "cp-marker"
-    title_cls  = "cp-marker-red-title" if red else "cp-marker-title"
-    with st.container():
+    header_cls  = "cp-header-red"   if red else "cp-header"
+    title_cls   = "cp-header-red-title" if red else "cp-header-title"
+    with st.container(border=True):
         st.markdown(
-            f'<div class="{marker_cls}">'
+            f'<div class="{header_cls}">'
             f'<span class="{title_cls}">{escape(title)}</span>'
             f'</div>',
             unsafe_allow_html=True,
