@@ -408,7 +408,8 @@ def inject_global_styles() -> None:
 
         .hero-copy {
             color: var(--muted);
-            max-width: 760px;
+            max-width: 100%;
+            white-space: nowrap;
             font-size: 1rem;
             line-height: 1.55;
             margin: .7rem 0 0;
@@ -1244,12 +1245,8 @@ def main() -> None:
     st.markdown(
         f"""
         <section class="hero-shell">
-            <div class="hero-topline">Spain50 Analytics • Daily Top 50 Playlist Intelligence</div>
             <h1 class="hero-title">Spain50 Analytics</h1>
-            <p class="hero-copy">
-                Track entries, exits, maturity, and retention with album artwork, content filters,
-                and release-form diagnostics for Spain's daily Top 50.
-            </p>
+            <p class="hero-copy">Track entries, exits, maturity, and retention with album artwork, content filters, and release-form diagnostics for Spain's daily Top 50.</p>
             <div class="metric-grid">{cards}</div>
         </section>
         """,
