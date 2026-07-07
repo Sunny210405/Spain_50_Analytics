@@ -1384,6 +1384,25 @@ def main() -> None:
     if "show_all_covers" not in st.session_state:
         st.session_state["show_all_covers"] = False
 
+    is_expanded = st.session_state["show_all_covers"]
+    latest_artwork = latest_unique_artwork(filtered_stage, 50 if is_expanded else 6, by_cover=not is_expanded)
+    
+    render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
+
+    # Show dynamic action button below the rail to expand/shrink
+    full_artwork_count = len(latest_unique_artwork(filtered_stage, 50, by_cover=False))
+    if full_artwork_count > 6:
+        _, btn_col, _ = st.columns([1.5, 1, 1.5])
+        with btn_col:
+            if is_expanded:
+                if st.button("Show Less ↑", key="toggle_covers_btn", use_container_width=True):
+                    st.session_state["show_all_covers"] = False
+                    st.rerun()
+            else:
+                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", use_container_width=True):
+                    st.session_state["show_all_covers"] = True
+                    st.rerun()
+
     if kpis["validation_failed_days"] or kpis["missing_calendar_dates"]:
         st.markdown(
             f"""
@@ -1398,7 +1417,6 @@ def main() -> None:
 
     tabs = st.tabs(
         [
-            "Top 50 Covers",
             "Overview",
             "Song Timeline",
             "Entry Exit Flow",
@@ -1410,26 +1428,6 @@ def main() -> None:
     )
 
     with tabs[0]:
-        is_expanded = st.session_state["show_all_covers"]
-        latest_artwork = latest_unique_artwork(filtered_stage, 50 if is_expanded else 6, by_cover=not is_expanded)
-        
-        render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
-
-        # Show dynamic action button below the rail to expand/shrink
-        full_artwork_count = len(latest_unique_artwork(filtered_stage, 50, by_cover=False))
-        if full_artwork_count > 6:
-            _, btn_col, _ = st.columns([1.5, 1, 1.5])
-            with btn_col:
-                if is_expanded:
-                    if st.button("Show Less ↑", key="toggle_covers_btn", use_container_width=True):
-                        st.session_state["show_all_covers"] = False
-                        st.rerun()
-                else:
-                    if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", use_container_width=True):
-                        st.session_state["show_all_covers"] = True
-                        st.rerun()
-
-    with tabs[1]:
         left, right = st.columns([1, 1])
         with left:
             with chart_panel("Lifecycle Stage Distribution"):
@@ -1468,7 +1466,7 @@ def main() -> None:
                         },
                     )
 
-    with tabs[2]:
+    with tabs[1]:
         if filtered_lifecycle.empty:
             st.info("No songs match the selected filters.")
         else:
@@ -1502,7 +1500,7 @@ def main() -> None:
                     hide_index=True,
                 )
 
-    with tabs[3]:
+    with tabs[2]:
         flow = filtered_churn.copy()
         flow_long = flow.melt(
             id_vars=["date_dt"],
@@ -1539,7 +1537,7 @@ def main() -> None:
         with chart_panel("Daily Entry & Exit Flow"):
             st.altair_chart(chart_style(flow_chart.properties(height=360)), use_container_width=True)
 
-    with tabs[4]:
+    with tabs[3]:
         # Dynamic explicit lifecycle score and release form longevity ratio calculations
         explicit_gp = filtered_lifecycle.groupby("explicit_label")["observed_days"].mean() if len(filtered_lifecycle) else pd.Series()
         if "Explicit" in explicit_gp and "Clean" in explicit_gp and explicit_gp["Clean"] != 0:
@@ -1603,7 +1601,7 @@ def main() -> None:
             )
             st.altair_chart(chart_style(duration_chart), use_container_width=True)
 
-    with tabs[5]:
+    with tabs[4]:
         monthly = monthly_rotation(filtered_churn)
         if len(monthly):
             monthly_long = monthly.melt(
@@ -1644,7 +1642,7 @@ def main() -> None:
             with chart_panel("Monthly Rotation Data"):
                 st.dataframe(monthly, use_container_width=True, hide_index=True)
 
-    with tabs[6]:
+    with tabs[5]:
         with chart_panel("Song Lifecycle Explorer"):
             display = filtered_lifecycle[
                 [
@@ -1679,7 +1677,7 @@ def main() -> None:
                 },
             )
 
-    with tabs[7]:
+    with tabs[6]:
         with chart_panel("⚠️ Raw Data Validation", red=True):
             st.dataframe(validation, use_container_width=True, hide_index=True)
             failed = validation[~validation["passes_50_rule"]]
