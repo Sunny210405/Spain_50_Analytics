@@ -365,7 +365,7 @@ def inject_global_styles() -> None:
             background:
                 linear-gradient(135deg, rgba(29,185,84,.22), rgba(18,18,18,.98) 42%, rgba(18,18,18,.98)),
                 #121212;
-            border-radius: 8px;
+            border-radius: 16px;
             padding: 1rem 1.15rem 1.05rem;
             margin-bottom: .9rem;
             box-shadow: 0 22px 60px rgba(0,0,0,.34);
@@ -426,7 +426,7 @@ def inject_global_styles() -> None:
             background: var(--panel) !important;
             backdrop-filter: blur(12px);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 16px;
             padding: .95rem .95rem .9rem;
             min-height: 98px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
