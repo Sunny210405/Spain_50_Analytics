@@ -423,7 +423,7 @@ def inject_global_styles() -> None:
         }
 
         .metric-card {
-            background: var(--panel) !important;
+            background: linear-gradient(to bottom, rgba(29, 185, 84, 0.12) 0%, var(--panel) 50%, var(--panel) 100%) !important;
             backdrop-filter: blur(12px);
             border: 1px solid var(--border);
             border-radius: 16px;
@@ -435,7 +435,7 @@ def inject_global_styles() -> None:
         }
 
         .metric-card:hover {
-            background: var(--panel-2) !important;
+            background: linear-gradient(to bottom, rgba(29, 185, 84, 0.22) 0%, var(--panel-2) 50%, var(--panel-2) 100%) !important;
             border-color: rgba(29, 185, 84, 0.35);
             transform: translateY(-4px) scale(1.02);
             box-shadow: 0 12px 30px rgba(29, 185, 84, 0.15);
