@@ -888,66 +888,6 @@ def inject_global_styles() -> None:
             .metric-value { font-size: 1.55rem; }
         }
         </style>
-        <script>
-        window.animateKPINumbers = function() {
-            const els = document.querySelectorAll('.metric-value[data-val]');
-            els.forEach(el => {
-                const targetVal = parseFloat(el.getAttribute('data-val'));
-                if (isNaN(targetVal)) return;
-
-                const lastVal = parseFloat(el.dataset.lastVal);
-                if (lastVal === targetVal) {
-                    return;
-                }
-                el.dataset.lastVal = targetVal;
-
-                const animToken = Math.random().toString();
-                el.dataset.animToken = animToken;
-
-                const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
-                const suffix = el.getAttribute('data-suffix') || '';
-                const duration = 1000;
-                const startTime = performance.now();
-                
-                const update = (now) => {
-                    if (el.dataset.animToken !== animToken) return;
-
-                    const elapsed = now - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const easeProgress = 1 - Math.pow(1 - progress, 3);
-                    const currentVal = easeProgress * targetVal;
-                    
-                    let formatted = "";
-                    if (decimals === 0) {
-                        formatted = Math.floor(currentVal).toLocaleString();
-                    } else {
-                        const fixed = currentVal.toFixed(decimals);
-                        const parts = fixed.split('.');
-                        parts[0] = parseInt(parts[0], 10).toLocaleString();
-                        formatted = parts.join('.');
-                    }
-                    
-                    el.textContent = formatted + suffix;
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(update);
-                    } else {
-                        let finalFormatted = "";
-                        if (decimals === 0) {
-                            finalFormatted = targetVal.toLocaleString();
-                        } else {
-                            const fixed = targetVal.toFixed(decimals);
-                            const parts = fixed.split('.');
-                            parts[0] = parseInt(parts[0], 10).toLocaleString();
-                            finalFormatted = parts.join('.');
-                        }
-                        el.textContent = finalFormatted + suffix;
-                    }
-                };
-                requestAnimationFrame(update);
-            });
-        };
-        </script>
         """,
         unsafe_allow_html=True,
     )
@@ -1332,10 +1272,81 @@ def main() -> None:
             <p class="hero-copy">Track entries, exits, maturity, and retention with album artwork, content filters, and release-form diagnostics for Spain's daily Top 50.</p>
             <div class="metric-grid">{cards}</div>
         </section>
-        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" onload="if(window.animateKPINumbers) window.animateKPINumbers();" style="display:none;"/>
         """,
         unsafe_allow_html=True,
     )
+
+    js_code = """
+    <script>
+    (function() {
+        try {
+            const parentDoc = window.parent.document;
+            const animate = () => {
+                const els = parentDoc.querySelectorAll('.metric-value[data-val]');
+                els.forEach(el => {
+                    const targetVal = parseFloat(el.getAttribute('data-val'));
+                    if (isNaN(targetVal)) return;
+
+                    const lastVal = parseFloat(el.dataset.lastVal);
+                    if (lastVal === targetVal) {
+                        return;
+                    }
+                    el.dataset.lastVal = targetVal;
+
+                    const animToken = Math.random().toString();
+                    el.dataset.animToken = animToken;
+
+                    const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+                    const suffix = el.getAttribute('data-suffix') || '';
+                    const duration = 1000;
+                    const startTime = performance.now();
+                    
+                    const update = (now) => {
+                        if (el.dataset.animToken !== animToken) return;
+
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const easeProgress = 1 - Math.pow(1 - progress, 3);
+                        const currentVal = easeProgress * targetVal;
+                        
+                        let formatted = "";
+                        if (decimals === 0) {
+                            formatted = Math.floor(currentVal).toLocaleString();
+                        } else {
+                            const fixed = currentVal.toFixed(decimals);
+                            const parts = fixed.split('.');
+                            parts[0] = parseInt(parts[0], 10).toLocaleString();
+                            formatted = parts.join('.');
+                        }
+                        
+                        el.textContent = formatted + suffix;
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(update);
+                        } else {
+                            let finalFormatted = "";
+                            if (decimals === 0) {
+                                finalFormatted = targetVal.toLocaleString();
+                            } else {
+                                const fixed = targetVal.toFixed(decimals);
+                                const parts = fixed.split('.');
+                                parts[0] = parseInt(parts[0], 10).toLocaleString();
+                                finalFormatted = parts.join('.');
+                            }
+                            el.textContent = finalFormatted + suffix;
+                        }
+                    };
+                    requestAnimationFrame(update);
+                });
+            };
+            setTimeout(animate, 100);
+        } catch (e) {
+            console.warn("KPI animation skipped due to sandbox restrictions: ", e);
+        }
+    })();
+    </script>
+    """
+    st.components.v1.html(js_code, height=0, width=0)
 
     if "show_all_covers" not in st.session_state:
         st.session_state["show_all_covers"] = False
