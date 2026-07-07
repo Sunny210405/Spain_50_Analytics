@@ -388,6 +388,7 @@ def inject_global_styles() -> None:
             line-height: 1.04;
             margin: 0;
             letter-spacing: 0;
+            text-align: center;
         }
 
         /* Hide Streamlit's auto-injected anchor link icon on headings */
@@ -413,6 +414,7 @@ def inject_global_styles() -> None:
             font-size: 1rem;
             line-height: 1.55;
             margin: .7rem 0 0;
+            text-align: center;
         }
 
         .metric-grid {
