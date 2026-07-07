@@ -419,7 +419,7 @@ def inject_global_styles() -> None:
             display: grid;
             grid-template-columns: repeat(6, minmax(0, 1fr));
             gap: .8rem;
-            margin: .85rem 0 .85rem;
+            margin: 1.75rem 0 .85rem;
         }
 
         .metric-card {
