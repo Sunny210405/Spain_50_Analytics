@@ -382,7 +382,7 @@ def inject_global_styles() -> None:
         }
 
         .hero-title {
-            color: var(--accent);
+            color: var(--text);
             font-size: clamp(1.75rem, 3.2vw, 2.9rem);
             font-weight: 800;
             line-height: 1.04;
@@ -1140,7 +1140,7 @@ def main() -> None:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-title">Spain50 Analytics</div>
+                <div class="sidebar-brand-title">Spain<span style="color: var(--accent);">50</span> Analytics</div>
                 <div class="sidebar-brand-sub">Daily Top 50 Playlist Intelligence</div>
             </div>
             <div class="sidebar-section-label">Source</div>
@@ -1270,7 +1270,7 @@ def main() -> None:
     st.markdown(
         f"""
         <section class="hero-shell">
-            <h1 class="hero-title">Spain50 Analytics</h1>
+            <h1 class="hero-title">Spain<span style="color: var(--accent);">50</span> Analytics</h1>
             <p class="hero-copy">Track entries, exits, maturity, and retention with album artwork, content filters, and release-form diagnostics for Spain's daily Top 50.</p>
             <div class="metric-grid">{cards}</div>
         </section>
