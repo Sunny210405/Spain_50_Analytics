@@ -1228,19 +1228,42 @@ def main() -> None:
     playlist_days = filtered_stage["date_dt"].nunique()
 
     metrics = [
-        ("Avg days", fmt_num(avg_days), "playlist survival"),
-        ("Entry to peak", fmt_num(peak_time), "maturity speed"),
-        ("Churn rate", fmt_num(churn_rate, "%"), "daily rotation"),
-        ("Stability", fmt_num(stability, "%"), "day-to-day overlap"),
-        ("Songs", f"{unique_songs:,}", "filtered catalog"),
-        ("Days", f"{playlist_days:,}", "snapshots in range"),
+        ("Avg days", avg_days, "", 1),
+        ("Entry to peak", peak_time, "", 1),
+        ("Churn rate", churn_rate, "%", 1),
+        ("Stability", stability, "%", 1),
+        ("Songs", unique_songs, "", 0),
+        ("Days", playlist_days, "", 0),
     ]
 
-    cards = "\n".join(
-        f'<div class="metric-card"><div class="metric-label">{label}</div>'
-        f'<div class="metric-value">{value}</div><div class="metric-note">{note}</div></div>'
-        for label, value, note in metrics
-    )
+    card_list = []
+    for label, val, suffix, dec in metrics:
+        note = (
+            "playlist survival" if label == "Avg days" else
+            "maturity speed" if label == "Entry to peak" else
+            "daily rotation" if label == "Churn rate" else
+            "day-to-day overlap" if label == "Stability" else
+            "filtered catalog" if label == "Songs" else
+            "snapshots in range"
+        )
+        if pd.isna(val):
+            card_list.append(
+                f'<div class="metric-card">'
+                f'<div class="metric-label">{label}</div>'
+                f'<div class="metric-value">n/a</div>'
+                f'<div class="metric-note">{note}</div>'
+                f'</div>'
+            )
+        else:
+            formatted = fmt_num(val, suffix, dec)
+            card_list.append(
+                f'<div class="metric-card">'
+                f'<div class="metric-label">{label}</div>'
+                f'<div class="metric-value" data-val="{val}" data-suffix="{suffix}" data-decimals="{dec}">{formatted}</div>'
+                f'<div class="metric-note">{note}</div>'
+                f'</div>'
+            )
+    cards = "\n".join(card_list)
 
     st.markdown(
         f"""
@@ -1249,6 +1272,57 @@ def main() -> None:
             <p class="hero-copy">Track entries, exits, maturity, and retention with album artwork, content filters, and release-form diagnostics for Spain's daily Top 50.</p>
             <div class="metric-grid">{cards}</div>
         </section>
+        <script>
+        (function() {{
+            const runAnimation = () => {{
+                const els = document.querySelectorAll('.metric-value[data-val]');
+                els.forEach(el => {{
+                    const targetVal = parseFloat(el.getAttribute('data-val'));
+                    if (isNaN(targetVal)) return;
+                    const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+                    const suffix = el.getAttribute('data-suffix') || '';
+                    const duration = 1000;
+                    const startTime = performance.now();
+                    
+                    const update = (now) => {{
+                        const elapsed = now - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        const easeProgress = 1 - Math.pow(1 - progress, 3);
+                        const currentVal = easeProgress * targetVal;
+                        
+                        let formatted = "";
+                        if (decimals === 0) {{
+                            formatted = Math.floor(currentVal).toLocaleString();
+                        }} else {{
+                            const fixed = currentVal.toFixed(decimals);
+                            const parts = fixed.split('.');
+                            parts[0] = parseInt(parts[0], 10).toLocaleString();
+                            formatted = parts.join('.');
+                        }}
+                        
+                        el.textContent = formatted + suffix;
+                        
+                        if (progress < 1) {{
+                            requestAnimationFrame(update);
+                        }} else {{
+                            let finalFormatted = "";
+                            if (decimals === 0) {{
+                                finalFormatted = targetVal.toLocaleString();
+                            }} else {{
+                                const fixed = targetVal.toFixed(decimals);
+                                const parts = fixed.split('.');
+                                parts[0] = parseInt(parts[0], 10).toLocaleString();
+                                finalFormatted = parts.join('.');
+                            }}
+                            el.textContent = finalFormatted + suffix;
+                        }}
+                    }};
+                    requestAnimationFrame(update);
+                }});
+            }};
+            setTimeout(runAnimation, 30);
+        }})();
+        </script>
         """,
         unsafe_allow_html=True,
     )
