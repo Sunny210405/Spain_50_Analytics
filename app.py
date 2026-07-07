@@ -1281,65 +1281,96 @@ def main() -> None:
     (function() {
         try {
             const parentDoc = window.parent.document;
-            const animate = () => {
-                const els = parentDoc.querySelectorAll('.metric-value[data-val]');
-                els.forEach(el => {
-                    const targetVal = parseFloat(el.getAttribute('data-val'));
-                    if (isNaN(targetVal)) return;
+            
+            const animateElement = (el) => {
+                const targetVal = parseFloat(el.getAttribute('data-val'));
+                if (isNaN(targetVal)) return;
 
-                    const lastVal = parseFloat(el.dataset.lastVal);
-                    if (lastVal === targetVal) {
-                        return;
-                    }
-                    el.dataset.lastVal = targetVal;
+                const lastVal = parseFloat(el.dataset.lastVal);
+                if (lastVal === targetVal) {
+                    return;
+                }
+                el.dataset.lastVal = targetVal;
 
-                    const animToken = Math.random().toString();
-                    el.dataset.animToken = animToken;
+                const animToken = Math.random().toString();
+                el.dataset.animToken = animToken;
 
-                    const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
-                    const suffix = el.getAttribute('data-suffix') || '';
-                    const duration = 1000;
-                    const startTime = performance.now();
+                const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+                const suffix = el.getAttribute('data-suffix') || '';
+                const duration = 1000;
+                const startTime = performance.now();
+                
+                const update = (now) => {
+                    if (el.dataset.animToken !== animToken) return;
+
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeProgress = 1 - Math.pow(1 - progress, 3);
+                    const currentVal = easeProgress * targetVal;
                     
-                    const update = (now) => {
-                        if (el.dataset.animToken !== animToken) return;
-
-                        const elapsed = now - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        const easeProgress = 1 - Math.pow(1 - progress, 3);
-                        const currentVal = easeProgress * targetVal;
-                        
-                        let formatted = "";
+                    let formatted = "";
+                    if (decimals === 0) {
+                        formatted = Math.floor(currentVal).toLocaleString();
+                    } else {
+                        const fixed = currentVal.toFixed(decimals);
+                        const parts = fixed.split('.');
+                        parts[0] = parseInt(parts[0], 10).toLocaleString();
+                        formatted = parts.join('.');
+                    }
+                    
+                    el.textContent = formatted + suffix;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    } else {
+                        let finalFormatted = "";
                         if (decimals === 0) {
-                            formatted = Math.floor(currentVal).toLocaleString();
+                            finalFormatted = targetVal.toLocaleString();
                         } else {
-                            const fixed = currentVal.toFixed(decimals);
+                            const fixed = targetVal.toFixed(decimals);
                             const parts = fixed.split('.');
                             parts[0] = parseInt(parts[0], 10).toLocaleString();
-                            formatted = parts.join('.');
+                            finalFormatted = parts.join('.');
                         }
-                        
-                        el.textContent = formatted + suffix;
-                        
-                        if (progress < 1) {
-                            requestAnimationFrame(update);
-                        } else {
-                            let finalFormatted = "";
-                            if (decimals === 0) {
-                                finalFormatted = targetVal.toLocaleString();
-                            } else {
-                                const fixed = targetVal.toFixed(decimals);
-                                const parts = fixed.split('.');
-                                parts[0] = parseInt(parts[0], 10).toLocaleString();
-                                finalFormatted = parts.join('.');
-                            }
-                            el.textContent = finalFormatted + suffix;
-                        }
-                    };
-                    requestAnimationFrame(update);
-                });
+                        el.textContent = finalFormatted + suffix;
+                    }
+                };
+                requestAnimationFrame(update);
             };
-            setTimeout(animate, 100);
+
+            const animateAll = () => {
+                const els = parentDoc.querySelectorAll('.metric-value[data-val]');
+                els.forEach(el => animateElement(el));
+            };
+
+            // Setup MutationObserver to detect value changes (e.g. from file upload)
+            if (parentDoc.__kpiObserver) {
+                parentDoc.__kpiObserver.disconnect();
+            }
+
+            const observer = new MutationObserver((mutations) => {
+                let shouldAnimate = false;
+                for (let mutation of mutations) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-val') {
+                        shouldAnimate = true;
+                        break;
+                    }
+                }
+                if (shouldAnimate) {
+                    animateAll();
+                }
+            });
+
+            observer.observe(parentDoc.body, {
+                attributes: true,
+                subtree: true,
+                attributeFilter: ['data-val']
+            });
+
+            parentDoc.__kpiObserver = observer;
+
+            // Run initial animation
+            setTimeout(animateAll, 100);
         } catch (e) {
             console.warn("KPI animation skipped due to sandbox restrictions: ", e);
         }
