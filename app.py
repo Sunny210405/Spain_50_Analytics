@@ -382,7 +382,7 @@ def inject_global_styles() -> None:
         }
 
         .hero-title {
-            color: var(--text);
+            color: var(--accent);
             font-size: clamp(1.75rem, 3.2vw, 2.9rem);
             font-weight: 800;
             line-height: 1.04;
@@ -1219,20 +1219,6 @@ def main() -> None:
     filtered_lifecycle = lifecycle[lifecycle["song_key"].isin(visible_keys)].copy()
     filtered_churn = date_filter(churn, date_range)
 
-    st.markdown(
-        """
-        <section class="hero-shell">
-            <div class="hero-topline">Spain50 Analytics • Daily Top 50 Playlist Intelligence</div>
-            <h1 class="hero-title">Spain50 Analytics</h1>
-            <p class="hero-copy">
-                Track entries, exits, maturity, and retention with album artwork, content filters,
-                and release-form diagnostics for Spain's daily Top 50.
-            </p>
-        </section>
-        """,
-        unsafe_allow_html=True,
-    )
-
     avg_days = filtered_lifecycle["observed_days"].mean() if len(filtered_lifecycle) else pd.NA
     peak_time = filtered_lifecycle["entry_to_peak_days"].mean() if len(filtered_lifecycle) else pd.NA
     churn_rate = filtered_churn["churn_rate"].dropna().mean() * 100
@@ -1240,15 +1226,34 @@ def main() -> None:
     unique_songs = filtered_lifecycle["song_key"].nunique()
     playlist_days = filtered_stage["date_dt"].nunique()
 
-    render_metric_grid(
-        [
-            ("Avg days", fmt_num(avg_days), "playlist survival"),
-            ("Entry to peak", fmt_num(peak_time), "maturity speed"),
-            ("Churn rate", fmt_num(churn_rate, "%"), "daily rotation"),
-            ("Stability", fmt_num(stability, "%"), "day-to-day overlap"),
-            ("Songs", f"{unique_songs:,}", "filtered catalog"),
-            ("Days", f"{playlist_days:,}", "snapshots in range"),
-        ]
+    metrics = [
+        ("Avg days", fmt_num(avg_days), "playlist survival"),
+        ("Entry to peak", fmt_num(peak_time), "maturity speed"),
+        ("Churn rate", fmt_num(churn_rate, "%"), "daily rotation"),
+        ("Stability", fmt_num(stability, "%"), "day-to-day overlap"),
+        ("Songs", f"{unique_songs:,}", "filtered catalog"),
+        ("Days", f"{playlist_days:,}", "snapshots in range"),
+    ]
+
+    cards = "\n".join(
+        f'<div class="metric-card"><div class="metric-label">{label}</div>'
+        f'<div class="metric-value">{value}</div><div class="metric-note">{note}</div></div>'
+        for label, value, note in metrics
+    )
+
+    st.markdown(
+        f"""
+        <section class="hero-shell">
+            <div class="hero-topline">Spain50 Analytics • Daily Top 50 Playlist Intelligence</div>
+            <h1 class="hero-title">Spain50 Analytics</h1>
+            <p class="hero-copy">
+                Track entries, exits, maturity, and retention with album artwork, content filters,
+                and release-form diagnostics for Spain's daily Top 50.
+            </p>
+            <div class="metric-grid">{cards}</div>
+        </section>
+        """,
+        unsafe_allow_html=True,
     )
 
     if "show_all_covers" not in st.session_state:
