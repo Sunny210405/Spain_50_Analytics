@@ -1223,7 +1223,7 @@ def main() -> None:
         """
         <section class="hero-shell">
             <div class="hero-topline">Spain50 Analytics • Daily Top 50 Playlist Intelligence</div>
-            <h1 class="hero-title">Playlist Lifecycle Intelligence</h1>
+            <h1 class="hero-title">Spain50 Analytics</h1>
             <p class="hero-copy">
                 Track entries, exits, maturity, and retention with album artwork, content filters,
                 and release-form diagnostics for Spain's daily Top 50.
