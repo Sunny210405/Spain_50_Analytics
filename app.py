@@ -35,6 +35,178 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+PARENT_JS = """
+(function() {
+    try {
+        console.log('Scroll animation script starting in parent window context...');
+        
+        const scrollObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                } else {
+                    entry.target.classList.remove('in-view');
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -40px 0px'
+        });
+
+        const setupScrollAnimations = () => {
+            const markers = document.querySelectorAll('.chart-marker:not([data-processed=true])');
+            markers.forEach(marker => {
+                marker.setAttribute('data-processed', 'true');
+                const chartType = marker.getAttribute('data-chart-type');
+                
+                const container = marker.closest('div[data-testid=element-container]');
+                if (!container) return;
+                
+                let chartEl = null;
+                let sibling = container.nextElementSibling;
+                let count = 0;
+                while (sibling && count < 3) {
+                    chartEl = sibling.querySelector('div[data-testid=stAltairChart]');
+                    if (chartEl) break;
+                    sibling = sibling.nextElementSibling;
+                    count++;
+                }
+                
+                if (!chartEl) return;
+                
+                chartEl.classList.add('scroll-animate');
+                if (chartType === 'bar') {
+                    chartEl.classList.add('scroll-animate-bar');
+                } else if (chartType === 'donut') {
+                    chartEl.classList.add('scroll-animate-donut');
+                } else {
+                    chartEl.classList.add('scroll-animate-default');
+                }
+                
+                scrollObserver.observe(chartEl);
+            });
+            
+            const wrappers = document.querySelectorAll('div[data-testid=stVerticalBlockBorderWrapper]:not([data-observed=true])');
+            wrappers.forEach(wrapper => {
+                wrapper.setAttribute('data-observed', 'true');
+                wrapper.classList.add('scroll-animate', 'scroll-animate-default');
+                scrollObserver.observe(wrapper);
+            });
+        };
+
+        const animateElement = (el) => {
+            const targetVal = parseFloat(el.getAttribute('data-val'));
+            if (isNaN(targetVal)) return;
+
+            const lastVal = parseFloat(el.dataset.lastVal);
+            if (lastVal === targetVal) {
+                return;
+            }
+            el.dataset.lastVal = targetVal;
+
+            const animToken = Math.random().toString();
+            el.dataset.animToken = animToken;
+
+            const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+            const suffix = el.getAttribute('data-suffix') || '';
+            const duration = 1000;
+            const startTime = performance.now();
+            
+            const update = (now) => {
+                if (el.dataset.animToken !== animToken) return;
+
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3);
+                const currentVal = easeProgress * targetVal;
+                
+                let formatted = '';
+                if (decimals === 0) {
+                    formatted = Math.floor(currentVal).toLocaleString();
+                } else {
+                    const fixed = currentVal.toFixed(decimals);
+                    const parts = fixed.split('.');
+                    parts[0] = parseInt(parts[0], 10).toLocaleString();
+                    formatted = parts.join('.');
+                }
+                
+                el.textContent = formatted + suffix;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    let finalFormatted = '';
+                    if (decimals === 0) {
+                        finalFormatted = targetVal.toLocaleString();
+                    } else {
+                        const fixed = targetVal.toFixed(decimals);
+                        const parts = fixed.split('.');
+                        parts[0] = parseInt(parts[0], 10).toLocaleString();
+                        finalFormatted = parts.join('.');
+                    }
+                    el.textContent = finalFormatted + suffix;
+                }
+            };
+            requestAnimationFrame(update);
+        };
+
+        const animateAll = () => {
+            const els = document.querySelectorAll('.metric-value[data-val]');
+            els.forEach(el => animateElement(el));
+        };
+
+        const mutationObserver = new MutationObserver((mutations) => {
+            let shouldAnimate = false;
+            let domChanged = false;
+            for (let mutation of mutations) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'data-val') {
+                    shouldAnimate = true;
+                }
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    domChanged = true;
+                }
+            }
+            if (shouldAnimate) {
+                animateAll();
+            }
+            if (domChanged) {
+                setupScrollAnimations();
+            }
+        });
+
+        mutationObserver.observe(document.body, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            attributeFilter: ['data-val']
+        });
+
+        setTimeout(() => {
+            animateAll();
+            setupScrollAnimations();
+        }, 100);
+
+    } catch(e) {
+        console.error('Scroll animation failed in parent context:', e);
+    }
+})();
+"""
+PARENT_JS_CLEAN = PARENT_JS.replace('"', "'").replace('\\n', ' ').replace('\n', ' ')
+
+IFRAME_JS = f"""
+(function() {{
+    const parentWindow = window.parent;
+    const parentDoc = parentWindow.document;
+    if (!parentWindow || !parentDoc) return;
+    if (parentWindow.__script_injected) return;
+    parentWindow.__script_injected = true;
+    
+    const s = parentDoc.createElement('script');
+    s.textContent = `{PARENT_JS_CLEAN}`;
+    parentDoc.body.appendChild(s);
+}})();
+"""
+IFRAME_JS_CLEAN = IFRAME_JS.replace('"', "'").replace('\\n', ' ').replace('\n', ' ')
 
 
 def inject_global_styles() -> None:
@@ -936,7 +1108,8 @@ def inject_global_styles() -> None:
             filter: blur(0);
         }
         </style>
-        """,
+        """
+        + f'<iframe src="javascript:{IFRAME_JS_CLEAN}" style="display:none;"></iframe>',
         unsafe_allow_html=True,
     )
 
@@ -1323,189 +1496,6 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
-
-    js_code = """
-    <script>
-    (function() {
-        try {
-            const parentDoc = window.parent.document;
-            if (!parentDoc) return;
-
-            const animateElement = (el) => {
-                const targetVal = parseFloat(el.getAttribute('data-val'));
-                if (isNaN(targetVal)) return;
-
-                const lastVal = parseFloat(el.dataset.lastVal);
-                if (lastVal === targetVal) {
-                    return;
-                }
-                el.dataset.lastVal = targetVal;
-
-                const animToken = Math.random().toString();
-                el.dataset.animToken = animToken;
-
-                const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
-                const suffix = el.getAttribute('data-suffix') || '';
-                const duration = 1000;
-                const startTime = performance.now();
-                
-                const update = (now) => {
-                    if (el.dataset.animToken !== animToken) return;
-
-                    const elapsed = now - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const easeProgress = 1 - Math.pow(1 - progress, 3);
-                    const currentVal = easeProgress * targetVal;
-                    
-                    let formatted = "";
-                    if (decimals === 0) {
-                        formatted = Math.floor(currentVal).toLocaleString();
-                    } else {
-                        const fixed = currentVal.toFixed(decimals);
-                        const parts = fixed.split('.');
-                        parts[0] = parseInt(parts[0], 10).toLocaleString();
-                        formatted = parts.join('.');
-                    }
-                    
-                    el.textContent = formatted + suffix;
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(update);
-                    } else {
-                        let finalFormatted = "";
-                        if (decimals === 0) {
-                            finalFormatted = targetVal.toLocaleString();
-                        } else {
-                            const fixed = targetVal.toFixed(decimals);
-                            const parts = fixed.split('.');
-                            parts[0] = parseInt(parts[0], 10).toLocaleString();
-                            finalFormatted = parts.join('.');
-                        }
-                        el.textContent = finalFormatted + suffix;
-                    }
-                };
-                requestAnimationFrame(update);
-            };
-
-            const animateAll = () => {
-                const els = parentDoc.querySelectorAll('.metric-value[data-val]');
-                els.forEach(el => animateElement(el));
-            };
-
-            // --- SCROLL ANIMATION SYSTEM ---
-            const setupScrollAnimations = () => {
-                const markers = parentDoc.querySelectorAll('.chart-marker:not([data-processed="true"])');
-                
-                markers.forEach(marker => {
-                    marker.setAttribute('data-processed', 'true');
-                    const chartType = marker.getAttribute('data-chart-type');
-                    
-                    // Walk up to find element container wrapping the marker
-                    const container = marker.closest('div[data-testid="element-container"]');
-                    if (!container) return;
-                    
-                    // Look up to 3 siblings forward to find the stAltairChart container
-                    let chartEl = null;
-                    let sibling = container.nextElementSibling;
-                    let count = 0;
-                    while (sibling && count < 3) {
-                        chartEl = sibling.querySelector('div[data-testid="stAltairChart"]');
-                        if (chartEl) break;
-                        sibling = sibling.nextElementSibling;
-                        count++;
-                    }
-                    
-                    if (!chartEl) return;
-                    
-                    // Add scroll-animation classes
-                    chartEl.classList.add('scroll-animate');
-                    if (chartType === 'bar') {
-                        chartEl.classList.add('scroll-animate-bar');
-                    } else if (chartType === 'donut') {
-                        chartEl.classList.add('scroll-animate-donut');
-                    } else {
-                        chartEl.classList.add('scroll-animate-default');
-                    }
-                    
-                    scrollObserver.observe(chartEl);
-                });
-                
-                // Observe panel wrappers for panel fade-up transitions
-                const wrappers = parentDoc.querySelectorAll('div[data-testid="stVerticalBlockBorderWrapper"]:not([data-observed="true"])');
-                wrappers.forEach(wrapper => {
-                    wrapper.setAttribute('data-observed', 'true');
-                    wrapper.classList.add('scroll-animate', 'scroll-animate-default');
-                    scrollObserver.observe(wrapper);
-                });
-            };
-
-            // Setup or reuse the IntersectionObserver
-            if (parentDoc.__scrollObserver) {
-                parentDoc.__scrollObserver.disconnect();
-            }
-
-            const ObserverClass = parentDoc.defaultView ? parentDoc.defaultView.IntersectionObserver : window.parent.IntersectionObserver;
-            const scrollObserver = new ObserverClass((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('in-view');
-                    } else {
-                        entry.target.classList.remove('in-view');
-                    }
-                });
-            }, {
-                threshold: 0.1,
-                rootMargin: '0px 0px -40px 0px'
-            });
-
-            parentDoc.__scrollObserver = scrollObserver;
-
-            // Setup MutationObserver to detect value changes (e.g. from file upload)
-            // and DOM tree updates (e.g. new charts/tabs loaded)
-            if (parentDoc.__kpiObserver) {
-                parentDoc.__kpiObserver.disconnect();
-            }
-
-            const observer = new MutationObserver((mutations) => {
-                let shouldAnimate = false;
-                let domChanged = false;
-                for (let mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'data-val') {
-                        shouldAnimate = true;
-                    }
-                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                        domChanged = true;
-                    }
-                }
-                if (shouldAnimate) {
-                    animateAll();
-                }
-                if (domChanged) {
-                    setupScrollAnimations();
-                }
-            });
-
-            observer.observe(parentDoc.body, {
-                attributes: true,
-                childList: true,
-                subtree: true,
-                attributeFilter: ['data-val']
-            });
-
-            parentDoc.__kpiObserver = observer;
-
-            // Run initial animations
-            setTimeout(() => {
-                animateAll();
-                setupScrollAnimations();
-            }, 100);
-        } catch (e) {
-            console.warn("Animations skipped due to sandbox restrictions: ", e);
-        }
-    })();
-    </script>
-    """
-    st.components.v1.html(js_code, height=0, width=0)
 
     if "show_all_covers" not in st.session_state:
         st.session_state["show_all_covers"] = False
