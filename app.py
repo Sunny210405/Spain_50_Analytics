@@ -151,7 +151,7 @@ PARENT_JS = """
         };
 
         const animateAll = () => {
-            const els = document.querySelectorAll('.metric-value[data-val]');
+            const els = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
             els.forEach(el => animateElement(el));
         };
 
@@ -171,6 +171,7 @@ PARENT_JS = """
             }
             if (domChanged) {
                 setupScrollAnimations();
+                animateAll();
             }
         });
 
@@ -1673,17 +1674,20 @@ def main() -> None:
         score_str = f"{dyn_explicit_score:.2f}x" if not pd.isna(dyn_explicit_score) else "n/a"
         ratio_str = f"{dyn_single_album_ratio:.2f}x" if not pd.isna(dyn_single_album_ratio) else "n/a"
 
+        score_attr = f'data-val="{dyn_explicit_score:.2f}" data-suffix="x" data-decimals="2"' if not pd.isna(dyn_explicit_score) else ""
+        ratio_attr = f'data-val="{dyn_single_album_ratio:.2f}" data-suffix="x" data-decimals="2"' if not pd.isna(dyn_single_album_ratio) else ""
+
         st.markdown(
             f"""
             <div class="maturity-metric-grid">
                 <div class="maturity-metric-card">
                     <div class="maturity-metric-label">Explicit Content Lifecycle Score</div>
-                    <div class="maturity-metric-value">{score_str}</div>
+                    <div class="maturity-metric-value" {score_attr}>{score_str}</div>
                     <div class="maturity-metric-note">Explicit vs Clean average longevity ratio</div>
                 </div>
                 <div class="maturity-metric-card">
                     <div class="maturity-metric-label">Single vs Album Longevity Ratio</div>
-                    <div class="maturity-metric-value">{ratio_str}</div>
+                    <div class="maturity-metric-value" {ratio_attr}>{ratio_str}</div>
                     <div class="maturity-metric-note">Singles vs Album tracks longevity ratio</div>
                 </div>
             </div>
