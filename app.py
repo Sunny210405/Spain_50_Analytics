@@ -889,6 +889,52 @@ def inject_global_styles() -> None:
             .hero-shell { padding: 1rem; }
             .metric-value { font-size: 1.55rem; }
         }
+
+        /* ── Scroll Animation System ── */
+        .scroll-animate {
+            opacity: 0;
+            filter: blur(5px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        clip-path 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        filter 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        /* Disable the default on-load fadeUp animation on stVerticalBlockBorderWrapper if JS is active */
+        div[data-testid="stVerticalBlockBorderWrapper"].scroll-animate {
+            animation: none !important;
+        }
+
+        .scroll-animate-default {
+            transform: translateY(35px);
+        }
+        .scroll-animate-default.in-view {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+        }
+
+        /* Bar chart specific: growing from left to right using clip-path */
+        .scroll-animate-bar {
+            clip-path: inset(0 100% 0 0);
+            transform: scale(0.98);
+        }
+        .scroll-animate-bar.in-view {
+            opacity: 1;
+            clip-path: inset(0 0 0 0);
+            transform: scale(1);
+            filter: blur(0);
+        }
+
+        /* Donut chart specific: scale up and spin slightly */
+        .scroll-animate-donut {
+            transform: scale(0.8) rotate(-15deg);
+        }
+        .scroll-animate-donut.in-view {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+            filter: blur(0);
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1283,7 +1329,8 @@ def main() -> None:
     (function() {
         try {
             const parentDoc = window.parent.document;
-            
+            if (!parentDoc) return;
+
             const animateElement = (el) => {
                 const targetVal = parseFloat(el.getAttribute('data-val'));
                 if (isNaN(targetVal)) return;
@@ -1345,36 +1392,115 @@ def main() -> None:
                 els.forEach(el => animateElement(el));
             };
 
+            // --- SCROLL ANIMATION SYSTEM ---
+            const setupScrollAnimations = () => {
+                const markers = parentDoc.querySelectorAll('.chart-marker:not([data-processed="true"])');
+                
+                markers.forEach(marker => {
+                    marker.setAttribute('data-processed', 'true');
+                    const chartType = marker.getAttribute('data-chart-type');
+                    
+                    // Walk up to find element container wrapping the marker
+                    const container = marker.closest('div[data-testid="element-container"]');
+                    if (!container) return;
+                    
+                    // Look up to 3 siblings forward to find the stAltairChart container
+                    let chartEl = null;
+                    let sibling = container.nextElementSibling;
+                    let count = 0;
+                    while (sibling && count < 3) {
+                        chartEl = sibling.querySelector('div[data-testid="stAltairChart"]');
+                        if (chartEl) break;
+                        sibling = sibling.nextElementSibling;
+                        count++;
+                    }
+                    
+                    if (!chartEl) return;
+                    
+                    // Add scroll-animation classes
+                    chartEl.classList.add('scroll-animate');
+                    if (chartType === 'bar') {
+                        chartEl.classList.add('scroll-animate-bar');
+                    } else if (chartType === 'donut') {
+                        chartEl.classList.add('scroll-animate-donut');
+                    } else {
+                        chartEl.classList.add('scroll-animate-default');
+                    }
+                    
+                    scrollObserver.observe(chartEl);
+                });
+                
+                // Observe panel wrappers for panel fade-up transitions
+                const wrappers = parentDoc.querySelectorAll('div[data-testid="stVerticalBlockBorderWrapper"]:not([data-observed="true"])');
+                wrappers.forEach(wrapper => {
+                    wrapper.setAttribute('data-observed', 'true');
+                    wrapper.classList.add('scroll-animate', 'scroll-animate-default');
+                    scrollObserver.observe(wrapper);
+                });
+            };
+
+            // Setup or reuse the IntersectionObserver
+            if (parentDoc.__scrollObserver) {
+                parentDoc.__scrollObserver.disconnect();
+            }
+
+            const ObserverClass = parentDoc.defaultView ? parentDoc.defaultView.IntersectionObserver : window.parent.IntersectionObserver;
+            const scrollObserver = new ObserverClass((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('in-view');
+                    } else {
+                        entry.target.classList.remove('in-view');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            parentDoc.__scrollObserver = scrollObserver;
+
             // Setup MutationObserver to detect value changes (e.g. from file upload)
+            // and DOM tree updates (e.g. new charts/tabs loaded)
             if (parentDoc.__kpiObserver) {
                 parentDoc.__kpiObserver.disconnect();
             }
 
             const observer = new MutationObserver((mutations) => {
                 let shouldAnimate = false;
+                let domChanged = false;
                 for (let mutation of mutations) {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'data-val') {
                         shouldAnimate = true;
-                        break;
+                    }
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        domChanged = true;
                     }
                 }
                 if (shouldAnimate) {
                     animateAll();
                 }
+                if (domChanged) {
+                    setupScrollAnimations();
+                }
             });
 
             observer.observe(parentDoc.body, {
                 attributes: true,
+                childList: true,
                 subtree: true,
                 attributeFilter: ['data-val']
             });
 
             parentDoc.__kpiObserver = observer;
 
-            // Run initial animation
-            setTimeout(animateAll, 100);
+            // Run initial animations
+            setTimeout(() => {
+                animateAll();
+                setupScrollAnimations();
+            }, 100);
         } catch (e) {
-            console.warn("KPI animation skipped due to sandbox restrictions: ", e);
+            console.warn("Animations skipped due to sandbox restrictions: ", e);
         }
     })();
     </script>
@@ -1433,6 +1559,7 @@ def main() -> None:
             with chart_panel("Lifecycle Stage Distribution"):
                 dist = stage_distribution(filtered_stage) if len(filtered_stage) else pd.DataFrame()
                 if len(dist):
+                    st.markdown('<div class="chart-marker" data-chart-type="bar"></div>', unsafe_allow_html=True)
                     st.altair_chart(bar_chart(dist, "stage", "observations", "stage"), use_container_width=True)
                 else:
                     st.info("No rows match the selected filters.")
@@ -1481,6 +1608,7 @@ def main() -> None:
             render_track_focus(selected_meta)
             song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
             with chart_panel("Playlist Position Over Time"):
+                st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
                 st.altair_chart(line_rank_chart(song_rows), use_container_width=True)
             with chart_panel("Daily Stage Breakdown"):
                 st.dataframe(
@@ -1535,6 +1663,7 @@ def main() -> None:
             )
         )
         with chart_panel("Daily Entry & Exit Flow"):
+            st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
             st.altair_chart(chart_style(flow_chart.properties(height=360)), use_container_width=True)
 
     with tabs[3]:
@@ -1578,12 +1707,14 @@ def main() -> None:
                 explicit_summary = attribute_summary(filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(explicit_summary, use_container_width=True, hide_index=True)
                 if len(explicit_summary):
+                    st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
                     st.altair_chart(donut_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), use_container_width=True)
         with col_b:
             with chart_panel("Single vs Album — Avg Longevity"):
                 release_summary = attribute_summary(filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(release_summary, use_container_width=True, hide_index=True)
                 if len(release_summary):
+                    st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
                     st.altair_chart(donut_chart(release_summary, "release_form", "avg_days", "release_form"), use_container_width=True)
 
         with chart_panel("Duration vs Retention Scatter"):
@@ -1599,6 +1730,7 @@ def main() -> None:
                 )
                 .properties(height=340)
             )
+            st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
             st.altair_chart(chart_style(duration_chart), use_container_width=True)
 
     with tabs[4]:
@@ -1638,6 +1770,7 @@ def main() -> None:
             )
             monthly_chart = monthly_chart.properties(height=360)
             with chart_panel("Monthly Rotation Profile"):
+                st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
                 st.altair_chart(chart_style(monthly_chart), use_container_width=True)
             with chart_panel("Monthly Rotation Data"):
                 st.dataframe(monthly, use_container_width=True, hide_index=True)
