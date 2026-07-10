@@ -38,7 +38,10 @@ st.set_page_config(
 PARENT_JS = """
 (function() {
     try {
-        console.log('Scroll animation script starting in parent window context...');
+        if (window.__script_injected) return;
+        window.__script_injected = true;
+        
+        console.log('Scroll and metric animation script starting in main window context...');
         
         const scrollObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -155,6 +158,29 @@ PARENT_JS = """
             els.forEach(el => animateElement(el));
         };
 
+        const metricObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const el = entry.target;
+                if (entry.isIntersecting) {
+                    animateElement(el);
+                } else {
+                    delete el.dataset.lastVal;
+                }
+            });
+        }, {
+            threshold: 0.05
+        });
+
+        const setupMetricObservers = () => {
+            const els = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
+            els.forEach(el => {
+                if (!el.dataset.observed) {
+                    el.dataset.observed = 'true';
+                    metricObserver.observe(el);
+                }
+            });
+        };
+
         const mutationObserver = new MutationObserver((mutations) => {
             let shouldAnimate = false;
             let domChanged = false;
@@ -171,7 +197,7 @@ PARENT_JS = """
             }
             if (domChanged) {
                 setupScrollAnimations();
-                animateAll();
+                setupMetricObservers();
             }
         });
 
@@ -183,31 +209,15 @@ PARENT_JS = """
         });
 
         setTimeout(() => {
-            animateAll();
             setupScrollAnimations();
+            setupMetricObservers();
         }, 100);
 
     } catch(e) {
-        console.error('Scroll animation failed in parent context:', e);
+        console.error('Scroll/Metric animation failed in main context:', e);
     }
 })();
 """
-PARENT_JS_CLEAN = PARENT_JS.replace('"', "'").replace('\\n', ' ').replace('\n', ' ')
-
-IFRAME_JS = f"""
-(function() {{
-    const parentWindow = window.parent;
-    const parentDoc = parentWindow.document;
-    if (!parentWindow || !parentDoc) return;
-    if (parentWindow.__script_injected) return;
-    parentWindow.__script_injected = true;
-    
-    const s = parentDoc.createElement('script');
-    s.textContent = `{PARENT_JS_CLEAN}`;
-    parentDoc.body.appendChild(s);
-}})();
-"""
-IFRAME_JS_CLEAN = IFRAME_JS.replace('"', "'").replace('\\n', ' ').replace('\n', ' ')
 
 
 def inject_global_styles() -> None:
@@ -229,6 +239,7 @@ def inject_global_styles() -> None:
         .album-title, .album-artist, .album-rank,
         .track-focus-title, .track-focus-meta,
         .stButton button, .stButton button p,
+        [data-testid="stDownloadButton"] button, [data-testid="stDownloadButton"] button p,
         [data-testid="stTabs"] button,
         [data-testid="stDataFrame"] *, [data-testid="stTable"] *,
         div[data-testid="stTextInput"] input,
@@ -718,6 +729,123 @@ def inject_global_styles() -> None:
             background: rgba(235,87,87,.10) !important;
         }
 
+        /* Report tab — header banner */
+        .report-header {
+            background: linear-gradient(135deg, rgba(29,185,84,.13) 0%, rgba(29,185,84,.04) 100%);
+            border: 1px solid rgba(29,185,84,.22);
+            border-radius: 14px;
+            padding: 1.4rem 1.8rem 1.2rem;
+            margin: .25rem 0 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: .55rem;
+            animation: fadeUp .4s ease both;
+        }
+        .report-header-title {
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: var(--text);
+            letter-spacing: -.01em;
+            line-height: 1.2;
+            margin: 0 0 .3rem;
+        }
+        .report-header-subtitle {
+            color: var(--muted);
+            font-size: .9rem;
+            margin: 0;
+            max-width: 700px;
+            line-height: 1.55;
+        }
+        .report-badges {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+            margin-top: .45rem;
+        }
+        .report-badge {
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 20px;
+            padding: .22rem .75rem;
+            font-size: .76rem;
+            font-weight: 700;
+            color: #b0b0b0;
+            letter-spacing: .02em;
+        }
+        .report-badge.green {
+            background: rgba(29,185,84,.12);
+            border-color: rgba(29,185,84,.3);
+            color: #1DB954;
+        }
+
+        /* Download button — exact match of st.button() */
+        [data-testid="stDownloadButton"] button {
+            background: linear-gradient(135deg, #1DB954 0%, #17a349 100%) !important;
+            color: #000 !important;
+            border: none !important;
+            font-weight: 600 !important;
+            font-size: 0.875rem !important;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            box-shadow: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.25rem 0.75rem !important;
+            min-height: 2.5rem !important;
+            line-height: 1.6 !important;
+            transition: filter .15s ease, transform .15s ease !important;
+        }
+        [data-testid="stDownloadButton"] button:hover {
+            filter: brightness(0.92) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* Report content box — rounded glassmorphism container */
+        .report-content-box {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.09);
+            border-radius: 16px;
+            padding: 1.8rem 2rem;
+            margin-top: 1rem;
+            line-height: 1.75;
+        }
+        .report-content-box h1,
+        .report-content-box h2 {
+            color: #f5f5f5;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            padding-bottom: .4rem;
+            margin-top: 1.6rem;
+            margin-bottom: .7rem;
+        }
+        .report-content-box h3 {
+            color: #1DB954;
+            margin-top: 1.2rem;
+            margin-bottom: .45rem;
+        }
+        .report-content-box p {
+            color: #d0d0d0;
+            margin-bottom: .75rem;
+        }
+        .report-content-box ul, .report-content-box ol {
+            color: #d0d0d0;
+            padding-left: 1.4rem;
+            margin-bottom: .75rem;
+        }
+        .report-content-box li {
+            margin-bottom: .35rem;
+        }
+        .report-content-box strong {
+            color: #f5f5f5;
+        }
+        .report-content-box code {
+            background: rgba(29,185,84,.12);
+            color: #1DB954;
+            padding: .1em .4em;
+            border-radius: 4px;
+            font-size: .9em;
+        }
+
+
+
         .section-title {
             font-size: 1.1rem;
             font-weight: 800;
@@ -1109,10 +1237,10 @@ def inject_global_styles() -> None:
             filter: blur(0);
         }
         </style>
-        """
-        + f'<iframe src="javascript:{IFRAME_JS_CLEAN}" style="display:none;"></iframe>',
+        """,
         unsafe_allow_html=True,
     )
+    st.html("<script>" + PARENT_JS + "</script>", unsafe_allow_javascript=True)
 
 
 @st.cache_data(show_spinner=False)
@@ -1541,6 +1669,8 @@ def main() -> None:
             "Churn Analytics",
             "Song Explorer",
             "Validation",
+            "Executive Summary",
+            "Research Paper",
         ]
     )
 
@@ -1804,6 +1934,7 @@ def main() -> None:
                 },
             )
 
+    # ── Validation Tab (index 6) ───────────────────────────────────────────
     with tabs[6]:
         with chart_panel("⚠️ Raw Data Validation", red=True):
             st.dataframe(validation, use_container_width=True, hide_index=True)
@@ -1816,6 +1947,104 @@ def main() -> None:
                     unsafe_allow_html=True,
                 )
                 st.dataframe(failed, use_container_width=True, hide_index=True)
+
+    # ── Executive Summary Tab (index 7) ────────────────────────────────────
+    with tabs[7]:
+        from pathlib import Path as _Path
+        _exec_path = _Path(__file__).resolve().parent / "reports" / "executive_summary.md"
+        _exec_size = f"{_exec_path.stat().st_size // 1024 or 1} KB" if _exec_path.exists() else "—"
+        _exec_body = _exec_path.read_text(encoding="utf-8") if _exec_path.exists() else ""
+        _exec_dl_url = "executive_summary.md"
+
+        # Download button — centered
+        _dl7_gap1, _dl7_mid, _dl7_gap2 = st.columns([1, 2, 1])
+        with _dl7_mid:
+            if _exec_path.exists():
+                st.download_button(
+                    label="Download Report ↓",
+                    data=_exec_path.read_bytes(),
+                    file_name="executive_summary.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                    key="dl_exec_tab",
+                )
+
+        # Header card
+        import html as _html_mod
+        st.markdown(
+            f"""
+            <div class="report-header">
+              <p class="report-header-title">🧾 Executive Summary</p>
+              <p class="report-header-subtitle">
+                A concise, stakeholder-ready overview of Atlantic Spain&#39;s playlist
+                lifecycle findings — covering headline KPIs, strategic implications,
+                and recommended actions for the Spain market.
+              </p>
+              <div class="report-badges">
+                <span class="report-badge green">Atlantic Spain Top 50</span>
+                <span class="report-badge">2024-05-18 → 2025-11-27</span>
+                <span class="report-badge">555 playlist days</span>
+                <span class="report-badge">{_exec_size} · Markdown</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if _exec_path.exists():
+            st.markdown(
+                f'<div class="report-content-box">\n\n{_exec_body}\n\n</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.warning("executive_summary.md not found. Run `python generate_reports.py` first.")
+
+    # ── Research Paper Tab (index 8) ──────────────────────────────────────
+    with tabs[8]:
+        from pathlib import Path as _Path
+        _rp_path = _Path(__file__).resolve().parent / "reports" / "research_paper.md"
+        _rp_size  = f"{_rp_path.stat().st_size // 1024 or 1} KB" if _rp_path.exists() else "—"
+        _rp_body  = _rp_path.read_text(encoding="utf-8") if _rp_path.exists() else ""
+
+        # Download button — centered
+        _dl8_gap1, _dl8_mid, _dl8_gap2 = st.columns([1, 2, 1])
+        with _dl8_mid:
+            if _rp_path.exists():
+                st.download_button(
+                    label="Download Report ↓",
+                    data=_rp_path.read_bytes(),
+                    file_name="research_paper.md",
+                    mime="text/markdown",
+                    use_container_width=True,
+                    key="dl_rp_tab",
+                )
+
+        # Header card
+        st.markdown(
+            f"""
+            <div class="report-header">
+              <p class="report-header-title">📄 Research Paper</p>
+              <p class="report-header-subtitle">
+                Full analytical write-up covering data scope, validation methodology,
+                lifecycle construction, KPI deep-dives, stage distribution, churn
+                dynamics, explicit vs clean content behavior, and strategic recommendations.
+              </p>
+              <div class="report-badges">
+                <span class="report-badge green">Atlantic Spain Top 50</span>
+                <span class="report-badge">575 unique songs</span>
+                <span class="report-badge">27,750 cleaned rows</span>
+                <span class="report-badge">{_rp_size} · Markdown</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if _rp_path.exists():
+            st.markdown(
+                f'<div class="report-content-box">\n\n{_rp_body}\n\n</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            st.warning("research_paper.md not found. Run `python generate_reports.py` first.")
 
 
     st.markdown(
