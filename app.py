@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from contextlib import contextmanager
 from html import escape
@@ -1323,7 +1323,7 @@ def main() -> None:
             on_change=commit_search,
         )
     with button_col:
-        if st.button("Search", key="catalog_search_button", use_container_width=True):
+        if st.button("Search", key="catalog_search_button", width="stretch"):
             commit_search()
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1416,11 +1416,11 @@ def main() -> None:
         _, btn_col, _ = st.columns([1.5, 1, 1.5])
         with btn_col:
             if is_expanded:
-                if st.button("Show Less ↑", key="toggle_covers_btn", use_container_width=True):
+                if st.button("Show Less ↑", key="toggle_covers_btn", width="stretch"):
                     st.session_state["show_all_covers"] = False
                     st.rerun()
             else:
-                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", use_container_width=True):
+                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", width="stretch"):
                     st.session_state["show_all_covers"] = True
                     st.rerun()
 
@@ -1457,7 +1457,7 @@ def main() -> None:
                 dist = stage_distribution(filtered_stage) if len(filtered_stage) else pd.DataFrame()
                 if len(dist):
                     st.markdown('<div class="chart-marker" data-chart-type="bar"></div>', unsafe_allow_html=True)
-                    st.altair_chart(bar_chart(dist, "stage", "observations", "stage"), use_container_width=True)
+                    st.altair_chart(bar_chart(dist, "stage", "observations", "stage"), width="stretch")
                 else:
                     st.info("No rows match the selected filters.")
         with right:
@@ -1480,7 +1480,7 @@ def main() -> None:
                 if len(table):
                     st.dataframe(
                         table,
-                        use_container_width=True,
+                        width="stretch",
                         hide_index=True,
                         column_config={
                             "album_cover_url": st.column_config.ImageColumn("Cover", width="small"),
@@ -1506,7 +1506,7 @@ def main() -> None:
             song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
             with chart_panel("Playlist Position Over Time"):
                 st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-                st.altair_chart(line_rank_chart(song_rows), use_container_width=True)
+                st.altair_chart(line_rank_chart(song_rows), width="stretch")
             with chart_panel("Daily Stage Breakdown"):
                 st.dataframe(
                     song_rows[
@@ -1521,7 +1521,7 @@ def main() -> None:
                             "explicit_label",
                         ]
                     ],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -1561,7 +1561,7 @@ def main() -> None:
         )
         with chart_panel("Daily Entry & Exit Flow"):
             st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-            st.altair_chart(chart_style(flow_chart.properties(height=360)), use_container_width=True)
+            st.altair_chart(chart_style(flow_chart.properties(height=360)), width="stretch")
 
     with tabs[3]:
         # Dynamic explicit lifecycle score and release form longevity ratio calculations
@@ -1605,17 +1605,17 @@ def main() -> None:
         with col_a:
             with chart_panel("Explicit vs Clean — Avg Longevity"):
                 explicit_summary = attribute_summary(filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
-                st.dataframe(explicit_summary, use_container_width=True, hide_index=True)
+                st.dataframe(explicit_summary, width="stretch", hide_index=True)
                 if len(explicit_summary):
                     st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
-                    st.altair_chart(donut_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), use_container_width=True)
+                    st.altair_chart(donut_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), width="stretch")
         with col_b:
             with chart_panel("Single vs Album — Avg Longevity"):
                 release_summary = attribute_summary(filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
-                st.dataframe(release_summary, use_container_width=True, hide_index=True)
+                st.dataframe(release_summary, width="stretch", hide_index=True)
                 if len(release_summary):
                     st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
-                    st.altair_chart(donut_chart(release_summary, "release_form", "avg_days", "release_form"), use_container_width=True)
+                    st.altair_chart(donut_chart(release_summary, "release_form", "avg_days", "release_form"), width="stretch")
 
         with chart_panel("Duration vs Retention Scatter"):
             duration_chart = (
@@ -1631,7 +1631,7 @@ def main() -> None:
                 .properties(height=340)
             )
             st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-            st.altair_chart(chart_style(duration_chart), use_container_width=True)
+            st.altair_chart(chart_style(duration_chart), width="stretch")
 
     with tabs[4]:
         monthly = monthly_rotation(filtered_churn)
@@ -1671,9 +1671,9 @@ def main() -> None:
             monthly_chart = monthly_chart.properties(height=360)
             with chart_panel("Monthly Rotation Profile"):
                 st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-                st.altair_chart(chart_style(monthly_chart), use_container_width=True)
+                st.altair_chart(chart_style(monthly_chart), width="stretch")
             with chart_panel("Monthly Rotation Data"):
-                st.dataframe(monthly, use_container_width=True, hide_index=True)
+                st.dataframe(monthly, width="stretch", hide_index=True)
 
     with tabs[5]:
         with chart_panel("Song Lifecycle Explorer"):
@@ -1698,7 +1698,7 @@ def main() -> None:
             ].sort_values(["observed_days", "peak_position"], ascending=[False, True])
             st.dataframe(
                 display,
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
                 column_config={
                     "album_cover_url": st.column_config.ImageColumn("Cover", width="small"),
@@ -1713,7 +1713,7 @@ def main() -> None:
     # ── Validation Tab (index 6) ───────────────────────────────────────────
     with tabs[6]:
         with chart_panel("⚠️ Raw Data Validation", red=True):
-            st.dataframe(validation, use_container_width=True, hide_index=True)
+            st.dataframe(validation, width="stretch", hide_index=True)
             failed = validation[~validation["passes_50_rule"]]
             if len(failed):
                 st.markdown(
@@ -1722,7 +1722,7 @@ def main() -> None:
                     f'⛔ {len(failed)} date(s) failing the 50-entry rule</div>',
                     unsafe_allow_html=True,
                 )
-                st.dataframe(failed, use_container_width=True, hide_index=True)
+                st.dataframe(failed, width="stretch", hide_index=True)
 
     # ── Executive Summary Tab (index 7) ────────────────────────────────────
     with tabs[7]:
@@ -1741,7 +1741,7 @@ def main() -> None:
                     data=_exec_path.read_bytes(),
                     file_name="executive_summary.md",
                     mime="text/markdown",
-                    use_container_width=True,
+                    width="stretch",
                     key="dl_exec_tab",
                 )
 
@@ -1790,7 +1790,7 @@ def main() -> None:
                     data=_rp_path.read_bytes(),
                     file_name="research_paper.md",
                     mime="text/markdown",
-                    use_container_width=True,
+                    width="stretch",
                     key="dl_rp_tab",
                 )
 
