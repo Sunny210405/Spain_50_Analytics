@@ -42,10 +42,11 @@ An advanced, interactive analytics dashboard designed to analyze and track the *
 │   ├── research_paper.md   # EDA, research methodology, and insights
 │   └── executive_summary.md # Stakeholder executive summary
 ├── output/                 # Generated analytical metrics
-│   ├── churn_daily.csv
-│   ├── daily_metrics.csv
-│   ├── lifecycle_metrics.csv
-│   └── monthly_metrics.csv
+│   ├── daily_churn_metrics.csv
+│   ├── daily_lifecycle_stages.csv
+│   ├── monthly_rotation_metrics.csv
+│   └── song_lifecycle_metrics.csv
+├── Atlantic_Spain.csv      # Raw Spain playlist dataset
 ├── app.py                  # Streamlit application entrypoint
 ├── generate_reports.py     # Script to calculate stats and export CSV reports
 ├── requirements.txt        # Project dependencies

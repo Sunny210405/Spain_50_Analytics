@@ -194,33 +194,9 @@ Spain should not be managed with a generic US or UK release model. The playlist 
 The analytical table enforces one Top 50 entry per position per date. One raw date failed the 50-entry validation rule and four calendar dates are missing, so public reporting should describe results as playlist-observed lifecycle behavior.
 """
 
-    readme = f"""# Atlantic Spain Lifecycle Analytics
-
-This project analyzes Atlantic Spain Top 50 playlist data through song lifecycle, stage, churn, and content maturity metrics.
-
-## Files
-
-- `app.py` - Streamlit dashboard.
-- `src/lifecycle_analysis.py` - reusable lifecycle and KPI logic.
-- `generate_reports.py` - creates markdown reports and CSV metric exports.
-- `reports/research_paper.md` - EDA, methodology, insights, and recommendations.
-- `reports/executive_summary.md` - stakeholder summary.
-- `output/*.csv` - generated lifecycle, stage, churn, and monthly metrics.
-
-## Run
-
-```powershell
-pip install -r requirements.txt
-python generate_reports.py
-streamlit run app.py
-```
-
-The dashboard defaults to `{DEFAULT_DATA_PATH}` and also supports CSV upload.
-"""
-
     (REPORTS / "research_paper.md").write_text(research, encoding="utf-8")
     (REPORTS / "executive_summary.md").write_text(executive, encoding="utf-8")
-    (ROOT / "README.md").write_text(readme, encoding="utf-8")
+
 
 
 if __name__ == "__main__":
