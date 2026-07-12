@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from contextlib import contextmanager
 from html import escape
@@ -1123,11 +1123,13 @@ def render_album_rail(rows: pd.DataFrame, title: str = "Latest playlist covers")
         
         # Staggered animation delay for a premium cascading effect (cap delay to prevent long trails)
         delay_ms = min(idx * 20, 600) if is_expanded else idx * 30
+        # Use loading="lazy" so the browser fetches images on-demand instead of all at once,
+        # preventing memory / timeout crashes on Streamlit Cloud when all 50 covers load.
         cards.append(
             "".join(
                 [
                     f'<div class="album-card" style="animation-delay: {delay_ms}ms;">',
-                    f'<img src="{escape(cover_url)}" alt="{escape(str(row["song"]))} album cover">',
+                    f'<img src="{escape(cover_url)}" alt="{escape(str(row["song"]))} album cover" loading="lazy">',
                     f'<div class="album-rank">#{int(row["position"])}</div>',
                     f'<div class="album-title">{escape(str(row["song"]))}</div>',
                     f'<div class="album-artist">{escape(str(row["artist"]))}</div>',
@@ -1406,12 +1408,14 @@ def main() -> None:
         st.session_state["show_all_covers"] = False
 
     is_expanded = st.session_state["show_all_covers"]
-    latest_artwork = latest_unique_artwork(filtered_stage, 50 if is_expanded else 6, by_cover=not is_expanded)
+    # Compute the full set once and reuse it — avoids a second expensive query on the same rerun
+    full_artwork = latest_unique_artwork(filtered_stage, 50, by_cover=False)
+    full_artwork_count = len(full_artwork)
+    latest_artwork = full_artwork.head(6) if not is_expanded else full_artwork
     
     render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
 
     # Show dynamic action button below the rail to expand/shrink
-    full_artwork_count = len(latest_unique_artwork(filtered_stage, 50, by_cover=False))
     if full_artwork_count > 6:
         _, btn_col, _ = st.columns([1.5, 1, 1.5])
         with btn_col:
