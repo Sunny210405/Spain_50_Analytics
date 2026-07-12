@@ -35,189 +35,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-PARENT_JS = """
-(function() {
-    try {
-        if (window.__script_injected) return;
-        window.__script_injected = true;
-        
-        console.log('Scroll and metric animation script starting in main window context...');
-        
-        const scrollObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('in-view');
-                } else {
-                    entry.target.classList.remove('in-view');
-                }
-            });
-        }, {
-            threshold: 0.1,
-            rootMargin: '0px 0px -40px 0px'
-        });
-
-        const setupScrollAnimations = () => {
-            const markers = document.querySelectorAll('.chart-marker:not([data-processed=true])');
-            markers.forEach(marker => {
-                marker.setAttribute('data-processed', 'true');
-                const chartType = marker.getAttribute('data-chart-type');
-                
-                const container = marker.closest('div[data-testid=element-container]');
-                if (!container) return;
-                
-                let chartEl = null;
-                let sibling = container.nextElementSibling;
-                let count = 0;
-                while (sibling && count < 3) {
-                    chartEl = sibling.querySelector('div[data-testid=stAltairChart]');
-                    if (chartEl) break;
-                    sibling = sibling.nextElementSibling;
-                    count++;
-                }
-                
-                if (!chartEl) return;
-                
-                chartEl.classList.add('scroll-animate');
-                if (chartType === 'bar') {
-                    chartEl.classList.add('scroll-animate-bar');
-                } else if (chartType === 'donut') {
-                    chartEl.classList.add('scroll-animate-donut');
-                } else {
-                    chartEl.classList.add('scroll-animate-default');
-                }
-                
-                scrollObserver.observe(chartEl);
-            });
-            
-            const wrappers = document.querySelectorAll('div[data-testid=stVerticalBlockBorderWrapper]:not([data-observed=true])');
-            wrappers.forEach(wrapper => {
-                wrapper.setAttribute('data-observed', 'true');
-                wrapper.classList.add('scroll-animate', 'scroll-animate-default');
-                scrollObserver.observe(wrapper);
-            });
-        };
-
-        const animateElement = (el) => {
-            const targetVal = parseFloat(el.getAttribute('data-val'));
-            if (isNaN(targetVal)) return;
-
-            const lastVal = parseFloat(el.dataset.lastVal);
-            if (lastVal === targetVal) {
-                return;
-            }
-            el.dataset.lastVal = targetVal;
-
-            const animToken = Math.random().toString();
-            el.dataset.animToken = animToken;
-
-            const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
-            const suffix = el.getAttribute('data-suffix') || '';
-            const duration = 1000;
-            const startTime = performance.now();
-            
-            const update = (now) => {
-                if (el.dataset.animToken !== animToken) return;
-
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                const currentVal = easeProgress * targetVal;
-                
-                let formatted = '';
-                if (decimals === 0) {
-                    formatted = Math.floor(currentVal).toLocaleString();
-                } else {
-                    const fixed = currentVal.toFixed(decimals);
-                    const parts = fixed.split('.');
-                    parts[0] = parseInt(parts[0], 10).toLocaleString();
-                    formatted = parts.join('.');
-                }
-                
-                el.textContent = formatted + suffix;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                } else {
-                    let finalFormatted = '';
-                    if (decimals === 0) {
-                        finalFormatted = targetVal.toLocaleString();
-                    } else {
-                        const fixed = targetVal.toFixed(decimals);
-                        const parts = fixed.split('.');
-                        parts[0] = parseInt(parts[0], 10).toLocaleString();
-                        finalFormatted = parts.join('.');
-                    }
-                    el.textContent = finalFormatted + suffix;
-                }
-            };
-            requestAnimationFrame(update);
-        };
-
-        const animateAll = () => {
-            const els = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
-            els.forEach(el => animateElement(el));
-        };
-
-        const metricObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const el = entry.target;
-                if (entry.isIntersecting) {
-                    animateElement(el);
-                } else {
-                    delete el.dataset.lastVal;
-                }
-            });
-        }, {
-            threshold: 0.05
-        });
-
-        const setupMetricObservers = () => {
-            const els = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
-            els.forEach(el => {
-                if (!el.dataset.observed) {
-                    el.dataset.observed = 'true';
-                    metricObserver.observe(el);
-                }
-            });
-        };
-
-        const mutationObserver = new MutationObserver((mutations) => {
-            let shouldAnimate = false;
-            let domChanged = false;
-            for (let mutation of mutations) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'data-val') {
-                    shouldAnimate = true;
-                }
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    domChanged = true;
-                }
-            }
-            if (shouldAnimate) {
-                animateAll();
-            }
-            if (domChanged) {
-                setupScrollAnimations();
-                setupMetricObservers();
-            }
-        });
-
-        mutationObserver.observe(document.body, {
-            attributes: true,
-            childList: true,
-            subtree: true,
-            attributeFilter: ['data-val']
-        });
-
-        setTimeout(() => {
-            setupScrollAnimations();
-            setupMetricObservers();
-        }, 100);
-
-    } catch(e) {
-        console.error('Scroll/Metric animation failed in main context:', e);
-    }
-})();
-"""
+PARENT_JS = ""
 
 
 def inject_global_styles() -> None:
@@ -1191,56 +1009,10 @@ def inject_global_styles() -> None:
             .metric-value { font-size: 1.55rem; }
         }
 
-        /* ── Scroll Animation System ── */
-        .scroll-animate {
-            opacity: 0;
-            filter: blur(5px);
-            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
-                        clip-path 1.2s cubic-bezier(0.16, 1, 0.3, 1),
-                        filter 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        }
-
-        /* Disable the default on-load fadeUp animation on stVerticalBlockBorderWrapper if JS is active */
-        div[data-testid="stVerticalBlockBorderWrapper"].scroll-animate {
-            animation: none !important;
-        }
-
-        .scroll-animate-default {
-            transform: translateY(35px);
-        }
-        .scroll-animate-default.in-view {
-            opacity: 1;
-            transform: translateY(0);
-            filter: blur(0);
-        }
-
-        /* Bar chart specific: growing from left to right using clip-path */
-        .scroll-animate-bar {
-            clip-path: inset(0 100% 0 0);
-            transform: scale(0.98);
-        }
-        .scroll-animate-bar.in-view {
-            opacity: 1;
-            clip-path: inset(0 0 0 0);
-            transform: scale(1);
-            filter: blur(0);
-        }
-
-        /* Donut chart specific: scale up and spin slightly */
-        .scroll-animate-donut {
-            transform: scale(0.8) rotate(-15deg);
-        }
-        .scroll-animate-donut.in-view {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-            filter: blur(0);
-        }
         </style>
         """,
         unsafe_allow_html=True,
     )
-    st.html("<script>" + PARENT_JS + "</script>", unsafe_allow_javascript=True)
 
 
 @st.cache_data(show_spinner=False)
@@ -1519,9 +1291,13 @@ def main() -> None:
     with st.sidebar:
         st.markdown('<div class="sidebar-section-label">Filters</div>', unsafe_allow_html=True)
         date_range = st.date_input("Date range", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-        if not isinstance(date_range, tuple) or len(date_range) != 2:
+        
+        # Robustly handle incomplete date selection
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            active_date_range = date_range
+        else:
+            active_date_range = (min_date, max_date)
             st.info("Select a start and end date.")
-            st.stop()
 
         stages = sorted(stage_daily["stage"].unique())
         selected_stages = st.multiselect("Lifecycle stages", stages, default=stages)
@@ -1553,7 +1329,7 @@ def main() -> None:
 
     search = st.session_state["catalog_search"]
 
-    filtered_stage = date_filter(stage_daily, date_range)
+    filtered_stage = date_filter(stage_daily, active_date_range)
     filtered_stage = filtered_stage[
         filtered_stage["stage"].isin(selected_stages)
         & filtered_stage["explicit_label"].isin(selected_explicit)
@@ -1568,7 +1344,7 @@ def main() -> None:
 
     visible_keys = filtered_stage["song_key"].unique()
     filtered_lifecycle = lifecycle[lifecycle["song_key"].isin(visible_keys)].copy()
-    filtered_churn = date_filter(churn, date_range)
+    filtered_churn = date_filter(churn, active_date_range)
 
     avg_days = filtered_lifecycle["observed_days"].mean() if len(filtered_lifecycle) else pd.NA
     peak_time = filtered_lifecycle["entry_to_peak_days"].mean() if len(filtered_lifecycle) else pd.NA

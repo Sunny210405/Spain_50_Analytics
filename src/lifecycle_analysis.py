@@ -29,6 +29,10 @@ def normalize_text(value: object) -> str:
     return text
 
 
+def normalize_series(series: pd.Series) -> pd.Series:
+    return series.fillna("").astype(str).str.strip().str.lower().str.replace(r"\s+", " ", regex=True)
+
+
 def parse_dates_robustly(series: pd.Series) -> pd.Series:
     dates = pd.to_datetime(series, format="%d-%m-%Y", errors="coerce")
     mask = dates.isna() & series.notna()
@@ -70,7 +74,7 @@ def read_playlist_csv(path_or_buffer) -> pd.DataFrame:
 def validate_raw(raw: pd.DataFrame) -> pd.DataFrame:
     work = raw.copy()
     work["date_dt"] = parse_dates_robustly(work["date"])
-    work["song_key"] = work["song"].map(normalize_text) + " | " + work["artist"].map(normalize_text)
+    work["song_key"] = normalize_series(work["song"]) + " | " + normalize_series(work["artist"])
 
     by_day = (
         work.groupby(["date", "date_dt"], dropna=False)
@@ -91,10 +95,10 @@ def clean_daily(raw: pd.DataFrame) -> pd.DataFrame:
     df = raw.copy()
     df["date_dt"] = parse_dates_robustly(df["date"])
     df = df.dropna(subset=["date_dt"])
-    df["song_norm"] = df["song"].map(normalize_text)
-    df["artist_norm"] = df["artist"].map(normalize_text)
+    df["song_norm"] = normalize_series(df["song"])
+    df["artist_norm"] = normalize_series(df["artist"])
     df["song_key"] = df["song_norm"] + " | " + df["artist_norm"]
-    df["album_type"] = df["album_type"].map(lambda x: normalize_text(x).title())
+    df["album_type"] = normalize_series(df["album_type"]).str.title()
     df["is_explicit"] = df["is_explicit"].astype(bool)
     df["duration_min"] = df["duration_ms"] / 60000
 
@@ -160,6 +164,37 @@ def classify_stage(row: pd.Series) -> str:
     return "Mature Phase"
 
 
+def classify_stage_vectorized(df: pd.DataFrame) -> pd.Series:
+    cond_new = df["days_since_entry"] <= 7
+    cond_peak = (df["position"] <= 10) & (df["top10_rolling_3"] >= 2)
+    cond_growth = df["rank_delta"] >= 2
+    cond_decline = df["rank_delta"] <= -2
+    cond_mature = (df["position"] >= 11) & (df["position"] <= 35) & (df["rolling_delta_3"].abs() <= 2)
+    
+    cond_decline_fallback = df["rank_delta"] < 0
+    cond_growth_fallback = df["rank_delta"] > 0
+    
+    conds = [
+        cond_new,
+        cond_peak,
+        cond_growth,
+        cond_decline,
+        cond_mature,
+        cond_decline_fallback,
+        cond_growth_fallback
+    ]
+    choices = [
+        "New Entry",
+        "Peak Phase",
+        "Growth Phase",
+        "Decline Phase",
+        "Mature Phase",
+        "Decline Phase",
+        "Growth Phase"
+    ]
+    return pd.Series(np.select(conds, choices, default="Mature Phase"), index=df.index)
+
+
 def build_stage_daily(daily: pd.DataFrame, lifecycle: pd.DataFrame) -> pd.DataFrame:
     df = daily.merge(
         lifecycle[
@@ -185,29 +220,21 @@ def build_stage_daily(daily: pd.DataFrame, lifecycle: pd.DataFrame) -> pd.DataFr
     df["rank_delta"] = df["rank_delta"].fillna(0)
     df["days_since_entry"] = (df["date_dt"] - df["entry_date"]).dt.days + 1
     df["top10_flag"] = df["position"].le(10).astype(int)
-    df["top10_rolling_3"] = (
-        df.groupby("song_key")["top10_flag"]
-        .rolling(3, min_periods=1)
-        .sum()
-        .reset_index(level=0, drop=True)
-    )
-    df["rolling_delta_3"] = (
-        df.groupby("song_key")["rank_delta"]
-        .rolling(3, min_periods=1)
-        .mean()
-        .reset_index(level=0, drop=True)
-    )
-    df["stage"] = df.apply(classify_stage, axis=1)
+    
+    # Fast rolling calculations using groupby transform
+    df["top10_rolling_3"] = df.groupby("song_key")["top10_flag"].transform(lambda x: x.rolling(3, min_periods=1).sum())
+    df["rolling_delta_3"] = df.groupby("song_key")["rank_delta"].transform(lambda x: x.rolling(3, min_periods=1).mean())
+    
+    # Vectorized classification
+    df["stage"] = classify_stage_vectorized(df)
     return df.sort_values(["date_dt", "position"]).reset_index(drop=True)
 
 
 def build_churn(stage_daily: pd.DataFrame) -> pd.DataFrame:
-    dates = sorted(stage_daily["date_dt"].unique())
+    grouped_keys = stage_daily.groupby("date_dt")["song_key"].apply(set)
     rows = []
-    previous_keys: set[str] | None = None
-    for date in dates:
-        current = stage_daily.loc[stage_daily["date_dt"].eq(date), "song_key"]
-        current_keys = set(current)
+    previous_keys = None
+    for date, current_keys in grouped_keys.items():
         if previous_keys is None:
             entries = len(current_keys)
             exits = 0
