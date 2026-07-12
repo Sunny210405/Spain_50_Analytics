@@ -1042,6 +1042,33 @@ def cached_monthly_rotation(churn_hash: int, _churn: pd.DataFrame) -> pd.DataFra
     return monthly_rotation(_churn)
 
 
+@st.fragment
+def album_rail_fragment(filtered_stage: pd.DataFrame) -> None:
+    """Isolated fragment so toggling the album rail does NOT rerun the whole page."""
+    if "show_all_covers" not in st.session_state:
+        st.session_state["show_all_covers"] = False
+
+    is_expanded = st.session_state["show_all_covers"]
+    # Compute once and slice — avoids double call
+    full_artwork = latest_unique_artwork(filtered_stage, 50, by_cover=False)
+    full_artwork_count = len(full_artwork)
+    latest_artwork = full_artwork.head(6) if not is_expanded else full_artwork
+
+    render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
+
+    if full_artwork_count > 6:
+        _, btn_col, _ = st.columns([1.5, 1, 1.5])
+        with btn_col:
+            if is_expanded:
+                if st.button("Show Less ↑", key="toggle_covers_btn", width="stretch"):
+                    st.session_state["show_all_covers"] = False
+                    st.rerun(scope="fragment")  # Only reruns THIS fragment, not the whole page
+            else:
+                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", width="stretch"):
+                    st.session_state["show_all_covers"] = True
+                    st.rerun(scope="fragment")  # Only reruns THIS fragment, not the whole page
+
+
 def fmt_num(value, suffix: str = "", digits: int = 1) -> str:
     if pd.isna(value):
         return "n/a"
@@ -1424,29 +1451,8 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    if "show_all_covers" not in st.session_state:
-        st.session_state["show_all_covers"] = False
+    album_rail_fragment(filtered_stage)
 
-    is_expanded = st.session_state["show_all_covers"]
-    # Compute the full set once and reuse it — avoids a second expensive query on the same rerun
-    full_artwork = latest_unique_artwork(filtered_stage, 50, by_cover=False)
-    full_artwork_count = len(full_artwork)
-    latest_artwork = full_artwork.head(6) if not is_expanded else full_artwork
-    
-    render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
-
-    # Show dynamic action button below the rail to expand/shrink
-    if full_artwork_count > 6:
-        _, btn_col, _ = st.columns([1.5, 1, 1.5])
-        with btn_col:
-            if is_expanded:
-                if st.button("Show Less ↑", key="toggle_covers_btn", width="stretch"):
-                    st.session_state["show_all_covers"] = False
-                    st.rerun()
-            else:
-                if st.button(f"Show All Top {full_artwork_count} ↓", key="toggle_covers_btn", width="stretch"):
-                    st.session_state["show_all_covers"] = True
-                    st.rerun()
 
     if kpis["validation_failed_days"] or kpis["missing_calendar_dates"]:
         st.markdown(
