@@ -35,7 +35,53 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-PARENT_JS = ""
+PARENT_JS = """
+(function() {
+    function animateValue(el) {
+        const targetVal = parseFloat(el.getAttribute('data-val'));
+        if (isNaN(targetVal)) return;
+        
+        if (el.dataset.animating === "true") return;
+        el.dataset.animating = "true";
+        
+        const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        const suffix = el.getAttribute('data-suffix') || '';
+        const duration = 1000;
+        const startTime = performance.now();
+        
+        function update(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            const currentVal = easeProgress * targetVal;
+            
+            let formatted = '';
+            if (decimals === 0) {
+                formatted = Math.floor(currentVal).toLocaleString();
+            } else {
+                const fixed = currentVal.toFixed(decimals);
+                const parts = fixed.split('.');
+                parts[0] = parseInt(parts[0], 10).toLocaleString();
+                formatted = parts.join('.');
+            }
+            
+            el.textContent = formatted + suffix;
+            
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            } else {
+                el.dataset.animating = "false";
+            }
+        }
+        requestAnimationFrame(update);
+    }
+    
+    setTimeout(() => {
+        const elements = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
+        elements.forEach(animateValue);
+    }, 100);
+})();
+"""
 
 
 def inject_global_styles() -> None:
@@ -485,7 +531,6 @@ def inject_global_styles() -> None:
             padding: 1.25rem;
             min-height: 120px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-            animation: fadeUp .45s ease both;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             display: flex;
             flex-direction: column;
@@ -744,7 +789,6 @@ def inject_global_styles() -> None:
             border-radius: 8px;
             padding: .8rem;
             margin: .4rem 0 .9rem;
-            animation: fadeUp .45s ease both;
         }
 
         .track-focus img {
@@ -810,7 +854,6 @@ def inject_global_styles() -> None:
             border-radius: 12px !important;
             overflow: hidden !important;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
-            animation: fadeUp .5s ease both;
             transition: box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
                         border-color 0.3s ease !important;
             padding: 0 !important;
@@ -1013,6 +1056,8 @@ def inject_global_styles() -> None:
         """,
         unsafe_allow_html=True,
     )
+    if PARENT_JS:
+        st.html("<script>" + PARENT_JS + "</script>", unsafe_allow_javascript=True)
 
 
 @st.cache_data(show_spinner=False, max_entries=3, ttl=3600)
