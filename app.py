@@ -1015,11 +1015,31 @@ def inject_global_styles() -> None:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=3, ttl=3600)
 def load_prepared_data(source_kind: str, source_value):
     if source_kind == "upload":
         return prepare_data(source_value)
     return prepare_data(Path(source_value))
+
+
+@st.cache_data(show_spinner=False, max_entries=20, ttl=3600)
+def cached_stage_distribution(stage_daily_hash: int, _stage_daily: pd.DataFrame) -> pd.DataFrame:
+    """Cached wrapper — recomputes only when filtered_stage actually changes."""
+    return stage_distribution(_stage_daily)
+
+
+@st.cache_data(show_spinner=False, max_entries=20, ttl=3600)
+def cached_attribute_summary(lifecycle_hash: int, _lifecycle: pd.DataFrame, attribute: str) -> pd.DataFrame:
+    """Cached wrapper — recomputes only when filtered_lifecycle + attribute changes."""
+    from src.lifecycle_analysis import attribute_summary
+    return attribute_summary(_lifecycle, attribute)
+
+
+@st.cache_data(show_spinner=False, max_entries=20, ttl=3600)
+def cached_monthly_rotation(churn_hash: int, _churn: pd.DataFrame) -> pd.DataFrame:
+    """Cached wrapper — recomputes only when filtered_churn changes."""
+    from src.lifecycle_analysis import monthly_rotation
+    return monthly_rotation(_churn)
 
 
 def fmt_num(value, suffix: str = "", digits: int = 1) -> str:
@@ -1458,7 +1478,7 @@ def main() -> None:
         left, right = st.columns([1, 1])
         with left:
             with chart_panel("Lifecycle Stage Distribution"):
-                dist = stage_distribution(filtered_stage) if len(filtered_stage) else pd.DataFrame()
+                dist = cached_stage_distribution(id(filtered_stage), filtered_stage) if len(filtered_stage) else pd.DataFrame()
                 if len(dist):
                     st.markdown('<div class="chart-marker" data-chart-type="bar"></div>', unsafe_allow_html=True)
                     st.altair_chart(bar_chart(dist, "stage", "observations", "stage"), width="stretch")
@@ -1608,14 +1628,14 @@ def main() -> None:
         col_a, col_b = st.columns(2)
         with col_a:
             with chart_panel("Explicit vs Clean — Avg Longevity"):
-                explicit_summary = attribute_summary(filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
+                explicit_summary = cached_attribute_summary(id(filtered_lifecycle), filtered_lifecycle, "explicit_label") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(explicit_summary, width="stretch", hide_index=True)
                 if len(explicit_summary):
                     st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
                     st.altair_chart(donut_chart(explicit_summary, "explicit_label", "avg_days", "explicit_label"), width="stretch")
         with col_b:
             with chart_panel("Single vs Album — Avg Longevity"):
-                release_summary = attribute_summary(filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
+                release_summary = cached_attribute_summary(id(filtered_lifecycle), filtered_lifecycle, "release_form") if len(filtered_lifecycle) else pd.DataFrame()
                 st.dataframe(release_summary, width="stretch", hide_index=True)
                 if len(release_summary):
                     st.markdown('<div class="chart-marker" data-chart-type="donut"></div>', unsafe_allow_html=True)
@@ -1638,7 +1658,7 @@ def main() -> None:
             st.altair_chart(chart_style(duration_chart), width="stretch")
 
     with tabs[4]:
-        monthly = monthly_rotation(filtered_churn)
+        monthly = cached_monthly_rotation(id(filtered_churn), filtered_churn)
         if len(monthly):
             monthly_long = monthly.melt(
                 id_vars=["month"],
