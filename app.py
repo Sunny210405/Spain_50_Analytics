@@ -1561,13 +1561,18 @@ def main() -> None:
         if filtered_lifecycle.empty:
             st.info("No songs match the selected filters.")
         else:
-            choices = (
-                filtered_lifecycle.assign(label=lambda d: d["song"] + " - " + d["artist"])
-                .sort_values(["observed_days", "peak_position"], ascending=[False, True])
-                [["label", "song_key"]]
-            )
-            selected_label = st.selectbox("Song", choices["label"].tolist())
-            selected_key = choices.loc[choices["label"].eq(selected_label), "song_key"].iloc[0]
+            col_artist, col_song = st.columns(2)
+            with col_artist:
+                artists = sorted(filtered_lifecycle["artist"].unique())
+                selected_artist = st.selectbox("Artist", artists)
+            with col_song:
+                artist_songs = filtered_lifecycle[filtered_lifecycle["artist"] == selected_artist].sort_values(
+                    ["observed_days", "peak_position"], ascending=[False, True]
+                )
+                song_options = artist_songs["song"].tolist()
+                selected_song = st.selectbox("Song", song_options)
+            
+            selected_key = artist_songs.loc[artist_songs["song"] == selected_song, "song_key"].iloc[0]
             selected_meta = lifecycle[lifecycle["song_key"].eq(selected_key)].iloc[0]
             render_track_focus(selected_meta)
             song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
