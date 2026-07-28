@@ -71,17 +71,47 @@ PARENT_JS = """
                 requestAnimationFrame(update);
             } else {
                 el.dataset.animating = "false";
+                el.dataset.animated = "true";
             }
         }
         requestAnimationFrame(update);
     }
     
-    setTimeout(() => {
-        const elements = document.querySelectorAll('.metric-value[data-val], .maturity-metric-value[data-val]');
-        elements.forEach(animateValue);
-    }, 100);
+    function setupObserver() {
+        const selector = '.metric-value[data-val], .maturity-metric-value[data-val]';
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateValue(entry.target);
+                } else {
+                    entry.target.dataset.animating = "false";
+                    entry.target.dataset.animated = "false";
+                }
+            });
+        }, { threshold: 0.1 });
+
+        function observeElements() {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => observer.observe(el));
+        }
+
+        observeElements();
+
+        const mutObserver = new MutationObserver(() => {
+            observeElements();
+        });
+        mutObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupObserver);
+    } else {
+        setupObserver();
+    }
 })();
 """
+
 
 
 def inject_global_styles() -> None:
@@ -1476,7 +1506,7 @@ def main() -> None:
     is_expanded = st.session_state["show_all_covers"]
     full_artwork = latest_unique_artwork(filtered_stage, 50, by_cover=False)
     full_artwork_count = len(full_artwork)
-    latest_artwork = full_artwork.head(6) if not is_expanded else full_artwork
+    latest_artwork = full_artwork if is_expanded else latest_unique_artwork(filtered_stage, 6, by_cover=True)
 
     render_album_rail(latest_artwork, "Latest filtered Top 50 covers")
 
