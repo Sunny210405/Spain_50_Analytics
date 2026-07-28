@@ -83,4 +83,4 @@ streamlit run app.py
 ---
 
 ## 🧑‍💻 Author
-Created with ❤️ by **[SUNNY](https://github.com/Sunny210405)**.
+Created with ❤️ by **[Anindya Jana](https://www.linkedin.com/in/anindya-jana-66a9b9333)**.
