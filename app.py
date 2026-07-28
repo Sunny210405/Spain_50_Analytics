@@ -83,7 +83,9 @@ PARENT_JS = """
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    animateValue(entry.target);
+                    if (entry.target.dataset.animated !== "true") {
+                        animateValue(entry.target);
+                    }
                 } else {
                     entry.target.dataset.animating = "false";
                     entry.target.dataset.animated = "false";
@@ -1345,9 +1347,47 @@ def donut_chart(df: pd.DataFrame, category: str, value: str, color_key: str | No
         )
         .properties(height=260)
     )
-    if title:
-        chart = chart.properties(title=title)
-    return chart_style(chart)
+@st.fragment
+def render_song_timeline_tab(filtered_lifecycle: pd.DataFrame, lifecycle: pd.DataFrame, stage_daily: pd.DataFrame) -> None:
+    if filtered_lifecycle.empty:
+        st.info("No songs match the selected filters.")
+        return
+
+    col_artist, col_song = st.columns(2)
+    with col_artist:
+        artists = sorted(filtered_lifecycle["artist"].unique())
+        selected_artist = st.selectbox("Artist", artists, key="timeline_artist_select")
+    with col_song:
+        artist_songs = filtered_lifecycle[filtered_lifecycle["artist"] == selected_artist].sort_values(
+            ["observed_days", "peak_position"], ascending=[False, True]
+        )
+        song_options = artist_songs["song"].tolist()
+        selected_song = st.selectbox("Song", song_options, key="timeline_song_select")
+    
+    selected_key = artist_songs.loc[artist_songs["song"] == selected_song, "song_key"].iloc[0]
+    selected_meta = lifecycle[lifecycle["song_key"].eq(selected_key)].iloc[0]
+    render_track_focus(selected_meta)
+    song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
+    with chart_panel("Playlist Position Over Time"):
+        st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
+        st.altair_chart(line_rank_chart(song_rows), width="stretch")
+    with chart_panel("Daily Stage Breakdown"):
+        st.dataframe(
+            song_rows[
+                [
+                    "date_dt",
+                    "position",
+                    "popularity",
+                    "stage",
+                    "days_since_entry",
+                    "rank_delta",
+                    "release_form",
+                    "explicit_label",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
 
 
 def main() -> None:
@@ -1588,44 +1628,7 @@ def main() -> None:
                     )
 
     with tabs[1]:
-        if filtered_lifecycle.empty:
-            st.info("No songs match the selected filters.")
-        else:
-            col_artist, col_song = st.columns(2)
-            with col_artist:
-                artists = sorted(filtered_lifecycle["artist"].unique())
-                selected_artist = st.selectbox("Artist", artists)
-            with col_song:
-                artist_songs = filtered_lifecycle[filtered_lifecycle["artist"] == selected_artist].sort_values(
-                    ["observed_days", "peak_position"], ascending=[False, True]
-                )
-                song_options = artist_songs["song"].tolist()
-                selected_song = st.selectbox("Song", song_options)
-            
-            selected_key = artist_songs.loc[artist_songs["song"] == selected_song, "song_key"].iloc[0]
-            selected_meta = lifecycle[lifecycle["song_key"].eq(selected_key)].iloc[0]
-            render_track_focus(selected_meta)
-            song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
-            with chart_panel("Playlist Position Over Time"):
-                st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-                st.altair_chart(line_rank_chart(song_rows), width="stretch")
-            with chart_panel("Daily Stage Breakdown"):
-                st.dataframe(
-                    song_rows[
-                        [
-                            "date_dt",
-                            "position",
-                            "popularity",
-                            "stage",
-                            "days_since_entry",
-                            "rank_delta",
-                            "release_form",
-                            "explicit_label",
-                        ]
-                    ],
-                    width="stretch",
-                    hide_index=True,
-                )
+        render_song_timeline_tab(filtered_lifecycle, lifecycle, stage_daily)
 
     with tabs[2]:
         flow = filtered_churn.copy()
