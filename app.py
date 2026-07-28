@@ -1361,95 +1361,38 @@ def render_song_timeline_tab(filtered_lifecycle: pd.DataFrame, lifecycle: pd.Dat
     col_artist, col_song = st.columns(2)
     with col_artist:
         artists = sorted(filtered_lifecycle["artist"].unique())
-        selected_artist = st.selectbox(
-            "Select Singer / Artist",
-            artists,
-            index=0 if len(artists) else None,
-            key="timeline_artist_select",
-        )
-
-    if not selected_artist:
-        st.info("Please select an artist above.")
-        return
-
-    artist_songs = filtered_lifecycle[filtered_lifecycle["artist"] == selected_artist].sort_values(
-        ["observed_days", "peak_position"], ascending=[False, True]
-    )
-
+        selected_artist = st.selectbox("Artist", artists, key="timeline_artist_select")
     with col_song:
-        song_options = artist_songs["song"].tolist()
-        selected_song = st.selectbox(
-            "Select Song (Optional)",
-            options=song_options,
-            index=None,
-            placeholder="Choose a song to view detailed timeline...",
-            key="timeline_song_select",
+        artist_songs = filtered_lifecycle[filtered_lifecycle["artist"] == selected_artist].sort_values(
+            ["observed_days", "peak_position"], ascending=[False, True]
         )
-
-    if not selected_song:
-        with chart_panel(f"🎵 {selected_artist} — Track Performance Overview"):
-            st.dataframe(
-                artist_songs[
-                    [
-                        "album_cover_url",
-                        "song",
-                        "release_form",
-                        "explicit_label",
-                        "peak_position",
-                        "observed_days",
-                        "entry_date",
-                        "exit_date",
-                        "avg_popularity",
-                    ]
-                ],
-                width="stretch",
-                hide_index=True,
-                column_config={
-                    "album_cover_url": st.column_config.ImageColumn("Cover", width="small"),
-                    "peak_position": st.column_config.NumberColumn("Peak Rank", format="#%d"),
-                    "observed_days": st.column_config.NumberColumn("Days on Chart", format="%d days"),
-                    "avg_popularity": st.column_config.NumberColumn("Avg Popularity", format="%.1f"),
-                },
-            )
-            st.caption("👈 Select a specific song from the dropdown above to view its detailed timeline chart.")
-        return
-
+        song_options = artist_songs["song"].tolist()
+        selected_song = st.selectbox("Song", song_options, key="timeline_song_select")
+    
     selected_key = artist_songs.loc[artist_songs["song"] == selected_song, "song_key"].iloc[0]
     selected_meta = lifecycle[lifecycle["song_key"].eq(selected_key)].iloc[0]
     render_track_focus(selected_meta)
-    
     song_rows = stage_daily[stage_daily["song_key"].eq(selected_key)].sort_values("date_dt")
-
-    view_mode = st.radio(
-        "View Mode",
-        options=["📈 Position Trajectory Graph", "📋 Daily Stage Breakdown Table"],
-        horizontal=True,
-        label_visibility="collapsed",
-        key="timeline_view_mode",
-    )
-
-    if view_mode == "📈 Position Trajectory Graph":
-        with chart_panel(f"Playlist Position Over Time — {selected_song}"):
-            st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
-            st.altair_chart(line_rank_chart(song_rows), width="stretch")
-    else:
-        with chart_panel(f"Daily Stage Breakdown — {selected_song}"):
-            st.dataframe(
-                song_rows[
-                    [
-                        "date_dt",
-                        "position",
-                        "popularity",
-                        "stage",
-                        "days_since_entry",
-                        "rank_delta",
-                        "release_form",
-                        "explicit_label",
-                    ]
-                ],
-                width="stretch",
-                hide_index=True,
-            )
+    with chart_panel("Playlist Position Over Time"):
+        st.markdown('<div class="chart-marker" data-chart-type="default"></div>', unsafe_allow_html=True)
+        st.altair_chart(line_rank_chart(song_rows), width="stretch")
+    with chart_panel("Daily Stage Breakdown"):
+        st.dataframe(
+            song_rows[
+                [
+                    "date_dt",
+                    "position",
+                    "popularity",
+                    "stage",
+                    "days_since_entry",
+                    "rank_delta",
+                    "release_form",
+                    "explicit_label",
+                ]
+            ],
+            width="stretch",
+            hide_index=True,
+        )
 
 
 def main() -> None:
