@@ -1347,6 +1347,11 @@ def donut_chart(df: pd.DataFrame, category: str, value: str, color_key: str | No
         )
         .properties(height=260)
     )
+    if title:
+        chart = chart.properties(title=title)
+    return chart_style(chart)
+
+
 @st.fragment
 def render_song_timeline_tab(filtered_lifecycle: pd.DataFrame, lifecycle: pd.DataFrame, stage_daily: pd.DataFrame) -> None:
     if filtered_lifecycle.empty:
